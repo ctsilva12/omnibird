@@ -1,0 +1,197 @@
+{
+  "yes": "yes",
+  "no": "no",
+  "the": "the",
+  "of": "of",
+  "undefined": "undefined",
+  "enable": "enable",
+  "disable": "disable",
+  "enabled": "enabled",
+  "disabled": "disabled",
+  "unknown": "unknown",
+  "page": "Page {page}/{total_pages}",
+  "and": "and",
+  "day": "day",
+  "days": "days",
+  "hour": "hour",
+  "hours": "hours",
+  "minute": "minute",
+  "minutes": "minutes",
+  "second": "second",
+  "seconds": "seconds",
+  "math": {
+    "command": "math",
+    "description": "Basic math operations and challenges",
+    "challenging_bot": "It's not possible to challenge a bot",
+    "challenge": "{mention}, test your knowledge:\n{question}",
+    "timeout": "Time's up! {mention} did not answer in time.",
+    "wrong_value": "{mention}, you're wrong! The correct answer is {answer}.",
+    "success": "{mention}, you answered correctly and received {coins} {coin_icon}!",
+    "invalid_value": "{mention}, that's not a valid value! The correct answer is {answer}.",
+    "not_target_answering": "{mention} tried to answer, but they're not the one being challenged. Another loss for them!",
+    "what_is": "What is",
+    "sign_of": "sign of",
+    "square_root": "square root",
+    "perimeter": "perimeter",
+    "area": "area",
+    "square_question": "What is the {operation} of a square with side length {side}?",
+    "rectangle_question": "What is the {operation} of a rectangle with length {length} and width {width}?",
+    "triangle_question": "What is the area of a triangle with base {base} and height {height}?",
+    "pentagon_question": "What is the perimeter of a regular pentagon with side length {length}?",
+    "trapezoid_question": "What is the area of a trapezoid with bases {base} and {base2} with height {height}?",
+    "pyth": {
+      "question": "What's x in this triangle?",
+      "adjacent": "Adjacent side",
+      "opposite": "Opposite side",
+      "hypotenuse": "Hypotenuse",
+      "tip": "Remember the {preprocessed_triple} (multiplied by x{multiply})."
+    }
+  },
+  "quantity": {
+    "none": "Please provide an amount.",
+    "invalid": "Please provide a valid quantity."
+  },
+  "balance": {
+    "command": "balance",
+    "description": "Displays the coin balance of a user",
+    "message": "{mention} has {coins} {coin_icon}."
+  },
+  "give": {
+    "command": "give",
+    "description": "Transfer currency to another user",
+    "no_target": "Please specify a recipient.",
+    "giving_money_to_self": "You cannot transfer funds to yourself.",
+    "insufficient_coins": "You have {coins} coins; you cannot transfer more than your balance.",
+    "success": "{mention} now has {coins} {coin_icon}."
+  },
+  "leaderboard": {
+    "command": "leaderboard",
+    "description": "Displays the top 10 users by coin balance",
+    "title": "Top 10 users by coin balance"
+  },
+  "shop": {
+    "command": "shop",
+    "description": "Interact with the shop",
+    "title": "Shop — use o!shop buy <item> [amount] to purchase items",
+    "items": {
+
+    },
+    "buy": {
+      "command": "shop buy",
+      "description": "Buy items from the shop",
+      "invalid_item": "Item not found.",
+      "insufficient_coins": "Insufficient funds."
+    }
+  },
+  "coinflip": {
+    "command": "coinflip",
+    "description": "Choose heads, tails, or side. Side has a 1/6000 chance and multiplies winnings by 5000x.",
+    "no_choice": "Please choose 'heads', 'tails', or 'side' and specify a bet amount.",
+    "insufficient_coins": "You have {coins} coins; you cannot wager more than your balance.",
+    "wrong_choice": "Valid options: HEADS, TAILS, and SIDE.",
+    "side": "side",
+    "heads": "heads",
+    "tails": "tails",
+    "i_thought_of": "I chose {choice}.",
+    "side_close": "It nearly landed on Side.",
+    "side_really_close": "It appeared to land on Side, but did not.",
+    "got_side": "You hit Side.",
+    "you_won": "You won!",
+    "you_lost": "You lost.",
+    "bet_0": "No winnings for a 0 bet.",
+    "new_balance": "{mention}'s new balance is {new_balance} {coin_icon}."
+  },
+  "russianroulette": {
+    "command": "russianroulette",
+    "description": "1/6 chance to lose all funds",
+    "warning": "**Russian Roulette**\n• 5/6 chance: your balance is multiplied by **1.25x**\n• 1/6 chance: you lose **ALL MONEY.**\nType `o!russianroulette yes` to proceed or `o!russianroulette no` to cancel.",
+    "no_avatar": "Please select a valid avatar.",
+    "multiplayer_warning": "{mentions}, {author_mention} is inviting you to a Russian Roulette game. Rules:\n**Russian Roulette**\n• 5/6 chance: your balance is multiplied by **1.25x**\n• 1/6 chance: you lose **ALL MONEY.**\n• If a real player loses, each remaining player receives 1/6 of their coins.\nReply with the avatar you wish to use, or `no` to cancel.",
+    "invalid_confirmation": "Please reply with 'yes' or 'no'.",
+    "confirmation_no": "Cancelled.",
+    "multiplayer_failed": "No opponents found; game cancelled.",
+    "invite_timeout": "{mention} did not respond in time and will not go bankrupt!",
+    "specify_mfw": "{mention}, specify an avatar after `avatar`.",
+    "declined_to_join": "{mention} has declined to join.",
+    "already_taken": "{mention, that one is already taken! Pick another.",
+    "fail_due_already_taken": "{mention} did not pick a valid avatar. They will not join in the roulette.",
+    "non_existent_mfw": "{mention}, that avatar doesn't exist. Input a valid one.",
+    "fail_due_non_existent_mfw": "{mention} picked a non-existent avatar. They will not join in the roulette.",
+    "successful_join": "{mention} has joined the death roulette!",
+    "spinning_the_gun": "Spinning the gun in {seconds}...",
+    "go": "GO!",
+    "lost": "{mention} has lost. New balance: {new_coins} {coin_icon} (down from {old_coins} {coin_icon}).",
+    "win": "{mention} survived. New balance: {new_coins} {coin_icon} (up from {old_coins} {coin_icon}).",
+    "bet_0": "No change: bet was 0."
+  },
+  "harvest": {
+    "command": "harvest",
+    "description": "Collect an item",
+    "next_free_harvest": "Your next free harvest is in {time}. Spend {coins} coins to get an extra harvest now? ({yes}/{no})",
+    "timeout": "You are on cooldown. Try again later.",
+    "insufficient_coins": "Insufficient coins to proceed.",
+    "prefix": "{mention}, you harvested ",
+    "new_mfw": "A new item was added to your collection."
+  },
+  "reminder": {
+    "command": "reminder",
+    "description": "Reminds you of upcoming harvests",
+    "invalid_choice": "Use 'enable', 'disable', or 'none' to set this option.",
+    "ready": "{mention}, your next free item is ready to be harvested!",
+    "changed": "Harvest reminders {option}."
+  },
+  "inventory": {
+    "command": "inventory",
+    "description": "View your or another user's items",
+    "no_mfws": "{name} has no items.",
+    "title": "{name}'s items"
+  },
+  "transfer": {
+    "command": "transfer",
+    "description": "Transfer one or more items to another user",
+    "no_target": "Please specify a recipient.",
+    "self_target": "Cannot transfer items to yourself.",
+    "no_values": "Specify items to transfer. Example: o!transfer @them 2 kfw, mfw, 3 wlw",
+    "nothing_to_transfer": "Nothing to transfer.",
+    "success": "{user_mention} has received {emojis} from {author_mention}."
+  },
+  "sell": {
+    "command": "sell",
+    "description": "Sell your items for currency",
+    "info": "Sell your items. Example: o!sell 2 kfw, mfw, 3 wlw",
+    "no_values": "Nothing to sell.",
+    "success": "{mention} now has {new_coins} {coin_icon} after selling {emojis}."
+  },
+  "selldupes": {
+    "command": "selldupes",
+    "description": "Automatically sell duplicate items. To exclude items, list them (e.g., o!autosell mfw).",
+    "no_dupes": "No duplicate items to sell.",
+    "success": "Done. Your new balance is {new_coins} {coin_icon}. (Earned {earned} {coin_icon} from selling duplicates.)"
+  },
+  "grant": {
+    "command": "grant",
+    "description": "Admin only",
+    "not_admin": "Insufficient permissions.",
+    "no_target": "Target required.",
+    "no_values": "No items specified.",
+    "fail": "Grant failed for {value}.",
+    "success": "Operation completed."
+  },
+  "parse": {
+    "no_mfw": "You do not own {mfw_name}.",
+    "invalid_quantity": "Please provide a valid amount.",
+    "more_than_they_have": "You only have {owned_quantity} {emoji}."
+  },
+  "harvest_messages": {
+    "message_1": " from storage.",
+    "message_2": " from your garden.",
+    "message_3": " found on your doormat."
+  },
+  "quote": {
+    "command": "quote",
+    "description": "Get a quote from Omnibird"
+  },
+  "quotes": {
+    "quote_1": "No quotes yet."
+  }
+}
