@@ -13,6 +13,7 @@ from languages import l, locale_reloader
 import random
 from helpers import get_admins
 
+load_dotenv()
 COGS = ["mfw", "economy", "gambling", "admin", "shop", "maths"]
 GUILDS_FOR_EMOJIS : list[int] = [1457482751723700444]
 BOT_TOKEN = "BOT_TOKEN"
@@ -104,7 +105,7 @@ class Omnibird(commands.Bot):
             self.hot_reloader = HotReloader(self, COGS)
             self.hot_reloader.start()
             locale_reloader.start()
-            print("HotReloader started (polling for changes)")
+            print("PROD=false, hotreloader enabled")
 
     async def on_ready(self):
         if not self._ready_once:
@@ -209,5 +210,4 @@ def run_discord_bot():
 
 
 if __name__ == "__main__":
-    load_dotenv()
     run_discord_bot()
