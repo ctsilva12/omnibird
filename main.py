@@ -176,7 +176,11 @@ async def cmd_reload(ctx, *, extension: str|None = None):
     targets = COGS if extension is None else [extension]
     reloaded = []
     failed = []
+    reload_locale = True if extension is None else False
     for ext in targets:
+        if ext == "locale":
+            reload_locale = True
+            continue
         try:
             if ext in bot.extensions:
                 await bot.reload_extension(ext)
@@ -186,12 +190,14 @@ async def cmd_reload(ctx, *, extension: str|None = None):
         except Exception:
             failed.append(ext)
             traceback.print_exc()
-    try:
-        l.load_all()
-        reloaded.append("locales")
-    except Exception:
-        failed.append("locales")
-        traceback.print_exc()
+    
+    if reload_locale:
+        try:
+            l.load_all()
+            reloaded.append("locale")
+        except Exception:
+            failed.append("locale")
+            traceback.print_exc()
     await ctx.author.send(f"reloaded: {reloaded}, failed: {failed}")
 
 

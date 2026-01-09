@@ -11,7 +11,7 @@ from languages import l
 
 # todo: organize all these functions into different files
 async def get_admins(cache=True) -> list[int]:
-    rows = await db.fetch_all("SELECT id from users WHERE admin = TRUE", cache=cache)
+    rows = await db.fetch_all("SELECT id from users WHERE is_admin = TRUE", cache=cache)
     ADMINS = [row[0] for row in rows]
     return ADMINS
 
