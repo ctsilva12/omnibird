@@ -1,8 +1,8 @@
 import random
 import re
-from languages import text_all
+from languages import l
 
-quotes = text_all("quotes")
+quotes = l.text_all("quotes")
 
 def get_response(message):
     p_message = message.lower()

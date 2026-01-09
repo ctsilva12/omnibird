@@ -1,2 +1,2 @@
-from languages import text_all
-HARVEST_MESSAGES = text_all("harvest_messages")
+from languages import l
+HARVEST_MESSAGES = l.text_all("harvest_messages")

@@ -1,79 +1,100 @@
-
-import json
 import os
+import json
 from utils.symbols import COIN_ICON, MFWS
+import asyncio
 
-LOCALE_PATH = "locale"
-TEXT = {}
-for filename in os.listdir(LOCALE_PATH):
-    if not filename.endswith(".json"):
-        continue
-    lang_code = filename.rsplit(".", 1)[0].lower()
-    with open(os.path.join(LOCALE_PATH, filename), "r", encoding="utf-8") as f:
-        TEXT[lang_code] = json.load(f)
+class LocaleManager:
+    def __init__(self, path="locale", default_lang="en"):
+        self.path = path
+        self.TEXT = {}
+        self.LANG = default_lang
+        self.load_all()
 
-# more languages to be added later
-LANG = "dev" if "dev" in TEXT else "en"
+    def load_all(self):
+        self.TEXT.clear()
+        for filename in os.listdir(self.path):
+            if not filename.endswith(".json"):
+                continue
+            lang_code = filename.rsplit(".", 1)[0].lower()
+            with open(os.path.join(self.path, filename), "r", encoding="utf-8") as f:
+                self.TEXT[lang_code] = json.load(f)
+        # fallback
+        self.LANG = "dev" if "dev" in self.TEXT else self.LANG
 
-def resolve_auto(fmt: dict[str, str]) -> dict[str, str]:
-    return {**MFWS, **fmt}
+    def resolve_auto(self, fmt: dict[str, str]) -> dict[str, str]:
+        return {**MFWS, **fmt}
 
-def text(*path, **fmt):
-    cur = TEXT[LANG]
-    walked = []
+    def text(self, *path, **fmt):
+        cur = self.TEXT[self.LANG]
+        walked = []
+        for key in path:
+            walked.append(str(key))
+            if not isinstance(cur, dict):
+                raise TypeError(f"Path {'/'.join(walked[:-1])} is not a dict")
+            if key not in cur:
+                raise KeyError(f"Missing key at {'/'.join(walked)}")
+            cur = cur[key]
 
-    for key in path:
-        walked.append(str(key))
+        if not isinstance(cur, str):
+            raise TypeError(f"Text at {'/'.join(walked)} is not a string")
+        return cur.format(**self.resolve_auto(fmt))
+
+    def text_all(self, *path, **fmt):
+        cur = self.TEXT[self.LANG]
+        walked = []
+        for key in path:
+            walked.append(str(key))
+            if not isinstance(cur, dict):
+                raise TypeError(f"Path {'/'.join(walked[:-1])} is not a dict")
+            if key not in cur:
+                raise KeyError(f"Missing key at {'/'.join(walked)}")
+            cur = cur[key]
+
         if not isinstance(cur, dict):
-            raise TypeError(f"Path {'/'.join(walked[:-1])} is not a dict")
-        if key not in cur:
-            raise KeyError(f"Missing key at {'/'.join(walked)}")
-        cur = cur[key]
-
-    if cur is None:
-        raise ValueError(f"Text at {'/'.join(walked)} is null")
-
-    if not isinstance(cur, str):
-        raise TypeError(f"Text at {'/'.join(walked)} is not a string")
-
-    try:
-        return cur.format(**resolve_auto(fmt))
-    except KeyError as e:
-        raise KeyError(
-            f"Missing format key {e} for text at {'/'.join(walked)}"
-        ) from e
+            raise TypeError(f"Text at {'/'.join(walked)} is not a dict")
+        values = []
+        for k, v in cur.items():
+            if not isinstance(v, str):
+                raise TypeError(f"Value at {'/'.join(walked + [str(k)])} is not a string")
+            values.append(v.format(**self.resolve_auto(fmt)))
+        return values
     
-def text_all(*path, **fmt):
-    cur = TEXT[LANG]
-    walked = []
+class LocaleReloader:
+    def __init__(self, manager: LocaleManager, poll_interval=2.0):
+        self.manager = manager
+        self.poll_interval = poll_interval
+        self._mtimes = {f: os.path.getmtime(os.path.join(manager.path, f))
+                        for f in os.listdir(manager.path) if f.endswith(".json")}
+        self._task = None
+        self._stopping = False
 
-    for key in path:
-        walked.append(str(key))
-        if not isinstance(cur, dict):
-            raise TypeError(f"Path {'/'.join(walked[:-1])} is not a dict")
-        if key not in cur:
-            raise KeyError(f"Missing key at {'/'.join(walked)}")
-        cur = cur[key]
+    async def _loop(self):
+        while not self._stopping:
+            await asyncio.sleep(self.poll_interval)
+            for filename in os.listdir(self.manager.path):
+                if not filename.endswith(".json"):
+                    continue
+                path = os.path.join(self.manager.path, filename)
+                try:
+                    mtime = os.path.getmtime(path)
+                except OSError:
+                    continue
+                prev = self._mtimes.get(filename)
+                if prev is None or mtime > prev:
+                    self.manager.load_all()
+                    self._mtimes[filename] = mtime
+                    print(f"[locale] Reloaded {filename}")
 
-    if cur is None:
-        raise ValueError(f"Text at {'/'.join(walked)} is null")
+    def start(self):
+        if self._task and not self._task.done():
+            return
+        self._stopping = False
+        self._task = asyncio.create_task(self._loop())
 
-    if not isinstance(cur, dict):
-        raise TypeError(f"Text at {'/'.join(walked)} is not a dict")
+    def stop(self):
+        self._stopping = True
+        if self._task:
+            self._task.cancel()
 
-    values = []
-    for k, v in cur.items():
-        if v is None:
-            raise ValueError(f"Value at {'/'.join(walked + [str(k)])} is null")
-        if not isinstance(v, str):
-            raise TypeError(
-                f"Value at {'/'.join(walked + [str(k)])} is not a string"
-            )
-        try:
-            values.append(v.format(**resolve_auto(fmt)))
-        except KeyError as e:
-            raise KeyError(
-                f"Missing format key {e} for text at {'/'.join(walked + [str(k)])}"
-            ) from e
-
-    return values
+l = LocaleManager()
+locale_reloader = LocaleReloader(l)

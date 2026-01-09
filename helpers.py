@@ -1,5 +1,4 @@
 import re
-
 from aiomysql import Cursor
 import db
 import discord
@@ -8,8 +7,13 @@ from datetime import datetime
 import random
 from typing import List, Dict, Any, Tuple
 from utils.harvest_messages import HARVEST_MESSAGES
-from languages import text
+from languages import l
 
+# todo: organize all these functions into different files
+async def get_admins(cache=True) -> list[int]:
+    rows = await db.fetch_all("SELECT id from users WHERE admin = TRUE", cache=cache)
+    ADMINS = [row[0] for row in rows]
+    return ADMINS
 
 def join_with_and(items: list[str]) -> str:
     if not items:
@@ -17,8 +21,8 @@ def join_with_and(items: list[str]) -> str:
     if len(items) == 1:
         return items[0]
     if len(items) == 2:
-        return f"{items[0]} {text("and")} {items[1]}"
-    return ", ".join(items[:-1]) + f" {text("and")} {items[-1]}"
+        return f"{items[0]} {l.text("and")} {items[1]}"
+    return ", ".join(items[:-1]) + f" {l.text("and")} {items[-1]}"
 
 def mfw_emoji(id : int, name : str, is_animated=False) -> str:
     if is_animated:
@@ -72,14 +76,14 @@ async def get_user_info(
 
 async def sanitize_quantity(ctx, quantity : int|None|str):
     if (quantity == None):
-            await ctx.send(text("quantity", "none"))
+            await ctx.send(l.text("quantity", "none"))
             return None
     try:
         quantity = int(quantity)
         if quantity <= 0:
             raise ValueError
     except (ValueError, TypeError):
-        await ctx.send(text("quantity", "invalid"))
+        await ctx.send(l.text("quantity", "invalid"))
         return None
     return quantity
 
@@ -99,13 +103,13 @@ def format_duration(delta):
 
     parts = []
     if days > 0:
-        parts.append(f"{days} {text("days") if days != 1 else text("day")}")
+        parts.append(f"{days} {l.text("days") if days != 1 else l.text("day")}")
     if hours > 0:
-        parts.append(f"{hours} {text("hours") if hours != 1 else text("hour")}")
+        parts.append(f"{hours} {l.text("hours") if hours != 1 else l.text("hour")}")
     if minutes > 0:
-        parts.append(f"{minutes} {text("minutes") if minutes != 1 else text("minute")}")
+        parts.append(f"{minutes} {l.text("minutes") if minutes != 1 else l.text("minute")}")
     if seconds > 0 or not parts:
-        parts.append(f"{seconds} {text("seconds") if seconds != 1 else text("second")}")
+        parts.append(f"{seconds} {l.text("seconds") if seconds != 1 else l.text("second")}")
 
     return join_with_and(parts)
 
@@ -175,7 +179,7 @@ async def open_pack_and_build_message(
     mfws = await open_pack(pack_id, amount)
     parts = []
     harvest_message = random.choice(harvest_messages)
-    prefix = text("harvest", "prefix", mention=user.mention)
+    prefix = l.text("harvest", "prefix", mention=user.mention)
     is_new = False
     for mfw in mfws:
         result = await db.execute(
@@ -204,7 +208,7 @@ async def open_pack_and_build_message(
         parts.append(item)
 
     message = prefix + join_with_and(parts) + harvest_message
-    if is_new and len(mfws) == 1: message += f" {text("harvest", "new_mfw")}"
+    if is_new and len(mfws) == 1: message += f" {l.text("harvest", "new_mfw")}"
     return message
 
 def canonical(name: str) -> str:
@@ -271,16 +275,16 @@ async def parse_and_validate_mfws(bot, user, *values: str):
 
     for mfw_name, quantity in mfws:
         if mfw_name not in inventory_map:
-            raise ValueError(text("parse", "no_mfw", mfw_name=mfw_name))
+            raise ValueError(l.text("parse", "no_mfw", mfw_name=mfw_name))
 
         mfw_id, guild_id, owned_quantity, _, _ = inventory_map[mfw_name]
 
         if quantity <= 0:
-            raise ValueError(text("parse", "invalid_quantity"))
+            raise ValueError(l.text("parse", "invalid_quantity"))
         if quantity > owned_quantity:
             guild = guilds.get(guild_id)
             emoji = discord.utils.get(guild.emojis, name=mfw_name) if guild else mfw_name
-            raise ValueError(text("parse", "more_than_they_have", owned_quantity=owned_quantity, emoji=emoji))
+            raise ValueError(l.text("parse", "more_than_they_have", owned_quantity=owned_quantity, emoji=emoji))
 
         items.append((mfw_id, quantity, guild_id, mfw_name))
 

@@ -1,6 +1,6 @@
 from typing import Union
 import random
-from languages import text
+from languages import l
 
 def generate_triangle_problem():
     timeout = 40
@@ -19,7 +19,7 @@ def generate_triangle_problem():
     if random.choice([True, False]):
         adjacent, opposite = pythagorean_triple[0], pythagorean_triple[1]
     else: adjacent, opposite = pythagorean_triple[1], pythagorean_triple[0]
-    question = f"{text("math", "pyth", "question")}\n{text("math", "pyth", "adjacent")}: {adjacent}\n{text("math", "pyth", "opposite")}: {opposite}\n{text("math", "pyth", "hypotenuse")}: {pythagorean_triple[2]}"
-    tip = text("math", "pyth", "tip", preprocessed_triple=preprocessed_triple, multiply=multiply)
+    question = f"{l.text("math", "pyth", "question")}\n{l.text("math", "pyth", "adjacent")}: {adjacent}\n{l.text("math", "pyth", "opposite")}: {opposite}\n{l.text("math", "pyth", "hypotenuse")}: {pythagorean_triple[2]}"
+    tip = l.text("math", "pyth", "tip", preprocessed_triple=preprocessed_triple, multiply=multiply)
 
     return question, answer, tip, timeout;

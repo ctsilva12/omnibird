@@ -4,26 +4,26 @@ import random
 import db
 import helpers
 from utils.symbols import COIN_ICON
-from languages import text
+from languages import l
 
 class Economy(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='balance', description=text("balance", "description"))
+    @commands.command(name='balance', description=l.text("balance", "description"))
     async def show_balance(self, ctx, user: discord.Member|None = None):
         target = user or ctx.author
         info = await helpers.get_user_info(target.id)
         coins = info["coins"]
-        await ctx.send(text("balance", "message", mention=target.mention, coins=coins), allowed_mentions=discord.AllowedMentions.none())
+        await ctx.send(l.text("balance", "message", mention=target.mention, coins=coins), allowed_mentions=discord.AllowedMentions.none())
 
-    @commands.command(name='give', description=text("give", "description"))
+    @commands.command(name='give', description=l.text("give", "description"))
     async def give_cash(self, ctx, user: discord.Member|None = None, amount: int|None = None):
         if not isinstance(user, discord.Member):
-            await ctx.send(text("give", "no_target"))
+            await ctx.send(l.text("give", "no_target"))
             return
         if (user.id == ctx.author.id):
-            await ctx.send(text("give", "giving_money_to_self"))
+            await ctx.send(l.text("give", "giving_money_to_self"))
             return
         
         quantity = await helpers.sanitize_quantity(ctx, amount)
@@ -31,7 +31,7 @@ class Economy(commands.Cog):
         async with db.transaction() as cur:
             info = await helpers.get_user_info(ctx.author.id, cur=cur, for_update=True)
             if (quantity > info["coins"]):
-                await ctx.send(text("give", "insufficient_coins", coins=info["coins"]))
+                await ctx.send(l.text("give", "insufficient_coins", coins=info["coins"]))
                 return
             
             target_info = await helpers.get_user_info(user.id, cur=cur, for_update=True)
@@ -45,9 +45,9 @@ class Economy(commands.Cog):
             END
             WHERE u.id IN (%s, %s);
             """, (ctx.author.id, quantity, user.id, quantity, ctx.author.id, user.id)) 
-            await ctx.send(text("give", "success", mention=user.mention, coins=target_info["coins"]), allowed_mentions=discord.AllowedMentions.none())
+            await ctx.send(l.text("give", "success", mention=user.mention, coins=target_info["coins"]), allowed_mentions=discord.AllowedMentions.none())
 
-    @commands.command(name='leaderboard', description=text("leaderboard", "description"))
+    @commands.command(name='leaderboard', description=l.text("leaderboard", "description"))
     async def show_leaderboard(self, ctx):
         leaderboard = await db.fetch_all("SELECT id, coins FROM users ORDER BY coins DESC LIMIT 10")
         description = ""
@@ -57,7 +57,7 @@ class Economy(commands.Cog):
             description += f"**{index}.** <@{user_id}> - {coins} {COIN_ICON}\n"
 
         embed = discord.Embed(
-            title=text("leaderboard", "title"),
+            title=l.text("leaderboard", "title"),
             description=description,
             color=discord.Color.gold()
         )

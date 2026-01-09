@@ -1,7 +1,7 @@
 import math
 import random
 from fractions import Fraction
-from languages import text
+from languages import l
 
 def display_in_radians(degrees: float, max_denominator: int = 24) -> str:
     degrees = round(degrees)
@@ -22,7 +22,7 @@ def display_in_radians(degrees: float, max_denominator: int = 24) -> str:
 
 def sign(x, tol=1e-12) -> str:
     if math.isnan(x):
-        return text("undefined")
+        return l.text("undefined")
     if x > tol:
         return "+"
     elif x < -tol: return "-"
@@ -34,7 +34,7 @@ def tan_sign(angle_deg: float) -> str:
     if a == 0:
         return "0"
     if a % 180 == 90:
-        return text("undefined")
+        return l.text("undefined")
     
     if a % 180 == 0:
         return "0"
@@ -56,7 +56,7 @@ def generate_trigonometry_problem():
     angle = random.choice(ANGLES_TO_CHOOSE) + quadrant
     radians = bool(random.randint(0, 1))
     if operation == "tan":
-        answer = tan_sign(angle) if angle % 180 != 90 else text("undefined")
+        answer = tan_sign(angle) if angle % 180 != 90 else l.text("undefined")
     elif operation == "cos":
         answer = sign(math.cos(math.radians(angle)))
     elif operation == "sin":
@@ -64,6 +64,6 @@ def generate_trigonometry_problem():
     print(f"Angle: {angle}º, Answer: {answer}")
 
     display = display_in_radians(angle) if radians else f"{angle}º"
-    question = f"{text("math", "what_is")} {text("the")} {text("math", "sign_of")} {operation}({display})? (+, -, 0 or {text("undefined")})"
+    question = f"{l.text("math", "what_is")} {l.text("the")} {l.text("math", "sign_of")} {operation}({display})? (+, -, 0 or {l.text("undefined")})"
     return question, answer
     

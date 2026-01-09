@@ -9,7 +9,7 @@ import asyncio
 from utils.harvest_messages import HARVEST_MESSAGES
 from utils.Pagination import Pagination
 from utils.symbols import COIN_ICON
-from languages import text
+from languages import l
 
 class MfwCommands(commands.Cog):
     def __init__(self, bot):
@@ -26,7 +26,7 @@ class MfwCommands(commands.Cog):
                 print(f"Setting reminder for {await helpers.get_username(self.bot, user_id)} at {reminder_at}")
                 asyncio.create_task(self.schedule_harvest_reminder(user_id, reminder_at, last_harvest_channel))
 
-    @commands.command(name='harvest', description=text("harvest", "description"))
+    @commands.command(name='harvest', description=l.text("harvest", "description"))
     async def get_mfw(self, ctx):
         COOLDOWN_IN_SECONDS = 600
         now = datetime.now()
@@ -41,7 +41,7 @@ class MfwCommands(commands.Cog):
             free = secs_since >= COOLDOWN_IN_SECONDS
         if (not free):
             time = helpers.format_duration(COOLDOWN_IN_SECONDS-secs_since)
-            await ctx.send(text("harvest", "next_free_harvest", time=time, coins=50, yes=text("yes"), no=text("no")))
+            await ctx.send(l.text("harvest", "next_free_harvest", time=time, coins=50, yes=l.text("yes"), no=l.text("no")))
             
             def check(m):
                 return m.author == ctx.author and m.channel == ctx.channel
@@ -49,14 +49,14 @@ class MfwCommands(commands.Cog):
             try:
                 msg = await self.bot.wait_for("message", check=check, timeout=30) 
             except asyncio.TimeoutError:
-                await ctx.send(text("harvest", "timeout"))
+                await ctx.send(l.text("harvest", "timeout"))
                 return
 
-            if msg.content.lower() != text("yes")[0]:
+            if msg.content.lower() != l.text("yes")[0]:
                 return
             
             if (info["coins"] < 50):
-                await ctx.send(text("harvest", "insufficient_coins", coins=50))
+                await ctx.send(l.text("harvest", "insufficient_coins", coins=50))
                 return
         # 1 = Normal Harvest
         message = await helpers.open_pack_and_build_message(
@@ -80,18 +80,18 @@ class MfwCommands(commands.Cog):
         channel = self.bot.get_channel(last_harvest_channel)
         await db.execute("UPDATE users SET reminder_at = NULL WHERE id = %s", (user_id,))
         if channel:
-            await channel.send(text("reminder", "ready", mention=f"<@{user_id}>"))
+            await channel.send(l.text("reminder", "ready", mention=f"<@{user_id}>"))
 
     
-    @commands.command(name='reminder', description=text("reminder", "description"))
+    @commands.command(name='reminder', description=l.text("reminder", "description"))
     async def set_reminder(self, ctx, choice : str|None = None):
         info = await helpers.get_user_info(ctx.author.id)
         if (choice != None):
             choice = choice.lower().strip()
-            if (choice == text("enable")): toggle = True
-            elif (choice == text("disable")): toggle = False
+            if (choice == l.text("enable")): toggle = True
+            elif (choice == l.text("disable")): toggle = False
             else: 
-                await ctx.send(text("invalid_choice"))
+                await ctx.send(l.text("invalid_choice"))
                 return
         else:
             toggle = not info["reminder"]
@@ -102,10 +102,10 @@ class MfwCommands(commands.Cog):
             if (info["reminder_at"] is not None and info["reminder_at"] > now): 
                 asyncio.create_task(self.schedule_harvest_reminder(ctx.author.id, info["reminder_at"], info["last_harvest_channel"]))
 
-        option = text("enabled") if toggle == True else text("disabled")
-        await ctx.send(text("reminder", "changed", option=option))
+        option = l.text("enabled") if toggle == True else l.text("disabled")
+        await ctx.send(l.text("reminder", "changed", option=option))
 
-    @commands.command(name='inventory', description=text("inventory", "description")) 
+    @commands.command(name='inventory', description=l.text("inventory", "description")) 
     async def inventory(self, ctx, user: discord.Member | None = None):
         target = user or ctx.author
 
@@ -119,13 +119,13 @@ class MfwCommands(commands.Cog):
         """, (target.id,))
 
         if not owned_mfws:
-            await ctx.send(text("inventory", "no_mfws", name=target.display_name))
+            await ctx.send(l.text("inventory", "no_mfws", name=target.display_name))
             return
         
         all_mfws = await db.fetch_all("SELECT * FROM mfws", cache=True)
         rarities = await db.fetch_all("SELECT * FROM rarities", cache=True, ttl=9999)
         rarity_map = {r[0]: r[1] for r in rarities}
-        rarity_map[0] = text("unknown").capitalize()
+        rarity_map[0] = l.text("unknown").capitalize()
 
         total_global = 0
         global_totals = {r[0]: 0 for r in rarities}
@@ -155,11 +155,11 @@ class MfwCommands(commands.Cog):
             total_pages = Pagination.compute_total_pages(len(entries), self.MAX_MFWS_PER_PAGE)
             if total_pages <= 0:
                 e = discord.Embed(
-                    title=text("inventory", "title", name=target.display_name),
-                    description=text("inventory", "no_mfws", name=target.display_name),
+                    title=l.text("inventory", "title", name=target.display_name),
+                    description=l.text("inventory", "no_mfws", name=target.display_name),
                     color=discord.Color.gold()
                 )
-                e.set_footer(text=f"0/{total_global} • {text("page", page=0, total_pages=0)}", icon_url="https://cdn.discordapp.com/emojis/1425964337377443840.webp")
+                e.set_footer(text=f"0/{total_global} • {l.text("page", page=0, total_pages=0)}", icon_url="https://cdn.discordapp.com/emojis/1425964337377443840.webp")
                 return e, 0
             
             page = max(1, min(page, total_pages))
@@ -168,7 +168,7 @@ class MfwCommands(commands.Cog):
             page_slice = entries[start:end]
 
             embed = discord.Embed(
-                title=text("inventory", "title", name=target.display_name),
+                title=l.text("inventory", "title", name=target.display_name),
                 colour=discord.Color.gold()
             )
 
@@ -182,25 +182,25 @@ class MfwCommands(commands.Cog):
                 chunks = helpers.chunk_by_length(lines) or [""]
                 for i, chunk in enumerate(chunks):
                     if i == 0:
-                        name = f"{rarity_map.get(rarity_id, text("unknown").capitalize())} ({user_totals.get(rarity_id, 0)}/{global_totals.get(rarity_id, 0)})"
+                        name = f"{rarity_map.get(rarity_id, l.text("unknown").capitalize())} ({user_totals.get(rarity_id, 0)}/{global_totals.get(rarity_id, 0)})"
                     else: name = ""
                     embed.add_field(name=name, value=chunk, inline=False)
-            embed.set_footer(text=f"{total_user}/{total_global} • {text("page", page=page, total_pages=total_pages)}", icon_url="https://cdn.discordapp.com/emojis/1425964337377443840.webp")
+            embed.set_footer(text=f"{total_user}/{total_global} • {l.text("page", page=page, total_pages=total_pages)}", icon_url="https://cdn.discordapp.com/emojis/1425964337377443840.webp")
             return embed, total_pages
 
         paginator = Pagination(ctx, get_inventory_page)
         await paginator.navigate()
-    @commands.command(name='transfer', description=text("transfer", "description"))
+    @commands.command(name='transfer', description=l.text("transfer", "description"))
     async def transfer_mfw(self, ctx, user: discord.Member | None = None, *values: str):
         if not isinstance(user, discord.Member):
-            await ctx.send(text("transfer", "no_target"))
+            await ctx.send(l.text("transfer", "no_target"))
             return
         if user.id == ctx.author.id:
-            await ctx.send(text("transfer", "self_target"))
+            await ctx.send(l.text("transfer", "self_target"))
             return
 
         if not values:
-            await ctx.send(text("transfer", "no_values"))
+            await ctx.send(l.text("transfer", "no_values"))
             return
 
         try:
@@ -210,7 +210,7 @@ class MfwCommands(commands.Cog):
             return
 
         if not mfws_to_transfer:
-            await ctx.send(text("transfer", "nothing_to_transfer"))
+            await ctx.send(l.text("transfer", "nothing_to_transfer"))
             return
         
         await helpers.get_user_info(user.id) # Create user if it doesn't exist
@@ -246,7 +246,7 @@ class MfwCommands(commands.Cog):
         await helpers.cleanup_inventory(ctx.author.id)
 
        
-        await ctx.send(text("transfer", "success", user_mention=user.mention, emojis=emojis, author_mention=ctx.author.mention))
+        await ctx.send(l.text("transfer", "success", user_mention=user.mention, emojis=emojis, author_mention=ctx.author.mention))
 
 
     @commands.command(name='sell', description='sell mfws for money')
@@ -263,7 +263,7 @@ class MfwCommands(commands.Cog):
                 if info["price"]:
                     message_array.append(f"{info['rarity']}: {info['price']} {COIN_ICON}")
             await ctx.send(
-                f"{text("sell", "info")}\n"
+                f"{l.text("sell", "info")}\n"
                 + "\n".join(message_array)
             )
             return
@@ -275,7 +275,7 @@ class MfwCommands(commands.Cog):
             return
 
         if not parsed_items:
-            await ctx.send(text("transfer", "no_values"))
+            await ctx.send(l.text("transfer", "no_values"))
             return
 
         # Build the sell list and compute amounts
@@ -325,9 +325,9 @@ class MfwCommands(commands.Cog):
         new_coins_row = await db.fetch_one("SELECT coins FROM users WHERE id = %s", (ctx.author.id,))
         new_coins = new_coins_row[0] if new_coins_row else None
 
-        await ctx.send(text("sell", "success", mention=ctx.author.mention, new_coins=new_coins, emojis=emojis))
+        await ctx.send(l.text("sell", "success", mention=ctx.author.mention, new_coins=new_coins, emojis=emojis))
         
-    @commands.command(name='selldupes', description=text("selldupes", "description"))
+    @commands.command(name='selldupes', description=l.text("selldupes", "description"))
     async def sell_dupes(self, ctx, *values: str):
         async with db.transaction() as cur:
             before_coins = (await helpers.get_user_info(ctx.author.id, cur=cur, for_update=True))["coins"]
@@ -386,11 +386,23 @@ class MfwCommands(commands.Cog):
             earned = int(new_coins) - int(before_coins)
 
             if earned != 0:
-                await ctx.send(text("selldupes", "success", new_coins=new_coins, earned=earned))
+                await ctx.send(l.text("selldupes", "success", new_coins=new_coins, earned=earned))
             else:
-                await ctx.send(text("selldupes", "no_dupes"))
-            
+                await ctx.send(l.text("selldupes", "no_dupes"))
+"""
+    @commands.command(name='trade', description=l.text("trade", "description"))
+    async def trade_mfws(self, ctx, user: discord.Member | None = None, *values: str):
+        if not isinstance(user, discord.Member):
+            await ctx.send(l.text("transfer", "no_target"))
+            return
+        if user.id == ctx.author.id:
+            await ctx.send(l.text("transfer", "self_target"))
+            return
 
+        if not values:
+            await ctx.send(l.text("transfer", "no_values"))
+            return
+"""
 
 async def setup(bot):
     await bot.add_cog(MfwCommands(bot))

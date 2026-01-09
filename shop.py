@@ -8,7 +8,7 @@ import json
 from typing import Dict, Tuple
 from utils.Pagination import Pagination
 from utils.symbols import COIN_ICON
-from languages import text
+from languages import l
 
 @dataclass
 class ShopItem:
@@ -34,26 +34,26 @@ class Shop(commands.Cog):
         end = start + self.ITEMS_PER_PAGE
         items_page = self.items[start:end]
 
-        embed = discord.Embed(title=text("shop", "title"), color=0x00ff00)
+        embed = discord.Embed(title=l.text("shop", "title"), color=0x00ff00)
         for item in items_page:
             embed.add_field(
                 name=f"{item.name} - {item.price} {COIN_ICON}",
                 value=item.description,
                 inline=False
             )
-        embed.set_footer(text=text("page", page=page, total_pages=total_pages))
+        embed.set_footer(text=l.text("page", page=page, total_pages=total_pages))
         return embed, total_pages
 
     async def load_items(self):
         items_db = await db.fetch_all("SELECT id, locale_id, price, item_type, payload FROM shop WHERE enabled = 1 ORDER BY item_type ASC, price ASC", cache=True)
         for id, locale_id, price, item_type, payload in items_db:
             self.items.append(ShopItem(id, 
-            text("shop", "items", locale_id, "name"), text("shop", "items", locale_id, "description"),
+            l.text("shop", "items", locale_id, "name"), l.text("shop", "items", locale_id, "description"),
             price, item_type, json.loads(payload)))
         
 
  
-    @commands.group(name='shop', description=text("shop", "description"), invoke_without_command=True)
+    @commands.group(name='shop', description=l.text("shop", "description"), invoke_without_command=True)
     async def shop(self, ctx):
         if (not self.items):
             await self.load_items()
@@ -61,7 +61,7 @@ class Shop(commands.Cog):
         await paginator.navigate()
         
 
-    @shop.command(name='buy', description=text("shop", "buy", "description"))
+    @shop.command(name='buy', description=l.text("shop", "buy", "description"))
     async def buy(self, ctx, *, args: str):
         item : ShopItem|None = None
         parts = args.rsplit(maxsplit=1)
@@ -81,13 +81,13 @@ class Shop(commands.Cog):
             if shop_item.name.lower().strip() == item_name:
                 item = shop_item
         if (item is None): 
-            await ctx.send(text("shop", "buy", "invalid_item"))
+            await ctx.send(l.text("shop", "buy", "invalid_item"))
             return
         
         coins_to_pay : int = item.price * amount
         info = await helpers.get_user_info(ctx.author.id)
         if (info["coins"] < coins_to_pay):
-            await ctx.send(text("shop", "buy", "insufficient_coins"))
+            await ctx.send(l.text("shop", "buy", "insufficient_coins"))
             return
 
         message = []

@@ -38,7 +38,7 @@ CREATE TABLE `game_results` (
   KEY `winner_player_id` (`winner_player_id`),
   KEY `fk_games` (`game_id`),
   CONSTRAINT `fk_game_results_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=8830 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9095 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -91,7 +91,7 @@ CREATE TABLE `mfws` (
   `is_animated` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `rarity_id` (`rarity_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1458941193726459936 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1459173797575000085 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -200,17 +200,10 @@ CREATE TABLE `users` (
   `reminder` tinyint(1) DEFAULT '0',
   `reminder_at` timestamp NULL DEFAULT NULL,
   `last_harvest_channel` bigint DEFAULT NULL,
+  `is_admin` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping events for database 'mfw'
---
-
---
--- Dumping routines for database 'mfw'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -221,4 +214,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-01-08 22:50:11
+-- Dump completed on 2026-01-09 20:27:51
