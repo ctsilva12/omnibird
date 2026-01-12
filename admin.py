@@ -30,7 +30,41 @@ class Admin(commands.Cog):
             except: 
                 await ctx.send(l.text("grant", "fail", value=value))
         await ctx.send(l.text("grant", "success"))
-            
+
+    @commands.command(name='clearcache', description="clear in-memory cache", hidden=True)
+    async def reset_cache(self, ctx):
+        ADMINS = await helpers.get_admins()
+        if ctx.author.id not in ADMINS:
+            return
+        
+        db.clear_cache()
+        await ctx.send("cache cleared")
+
+    @commands.command(name='setrarity', description="change rarity of a mfw", hidden=True)
+    async def assign_rarity(self, ctx, mfw_name : str|None, new_rarity_id : int|None):
+        ADMINS = await helpers.get_admins()
+        if ctx.author.id not in ADMINS:
+            return
+        
+        if (mfw_name is None):
+            await ctx.send("Error: mfw_name is None")
+            return
+        if (new_rarity_id is None):
+            await ctx.send("Error: new_rarity_id is None")
+            return
+
+        rarities = await db.fetch_all("SELECT * FROM rarities", cache=True, ttl=9999)
+        rarity_map = {r[0]: r[1] for r in rarities}
+        rarity_map[0] = "Unused"
+        if new_rarity_id not in rarity_map:
+            await ctx.send(f"Error: invalid new_rarity_id. Valid ids: {rarity_map}")
+            return
+        
+        row_count = await db.execute("UPDATE mfws SET rarity_id = %s WHERE name = %s", (new_rarity_id, mfw_name))
+        if row_count == 0:
+            await ctx.send(f"Error: {mfw_name} does not exist")
+        else:
+            await ctx.send(f"{mfw_name} successfully changed to {rarity_map[new_rarity_id]}!")
 
 
 async def setup(bot):

@@ -8,12 +8,28 @@ import random
 from typing import List, Dict, Any, Tuple
 from utils.harvest_messages import HARVEST_MESSAGES
 from languages import l
+import traceback
 
 # todo: organize all these functions into different files
 async def get_admins(cache=True) -> list[int]:
     rows = await db.fetch_all("SELECT id from users WHERE is_admin = TRUE", cache=cache)
     ADMINS = [row[0] for row in rows]
     return ADMINS
+
+async def sync_emojis(bot, guild_ids):
+    for guild_id in guild_ids:
+        guild = bot.get_guild(guild_id)
+        if guild:
+            try:
+                for emoji in guild.emojis:
+                    await db.execute(
+                        "INSERT INTO mfws (id, name, rarity_id, guild_id, is_animated) "
+                        "VALUES (%s, %s, %s, %s, %s) AS new ON DUPLICATE KEY UPDATE name = new.name",
+                        (emoji.id, emoji.name, 0, guild_id, getattr(emoji, "animated", False))
+                    )
+            except Exception:
+                print(f"Failed to sync emojis for guild {guild_id}")
+                traceback.print_exc()
 
 def join_with_and(items: list[str]) -> str:
     if not items:
@@ -35,34 +51,45 @@ async def get_user_info(
     for_update: bool = False
 ) -> dict:
     """
-    Fetch user info.
-    - for_update=True requires cur (inside a transaction).
+    Fetch user info, creating the user if it does not exist.
+    MySQL + aiomysql safe.
     """
     if for_update and cur is None:
-        raise ValueError("Cannot use FOR UPDATE without an existing transaction cursor.")
+        raise ValueError("for_update=True requires a transaction cursor")
 
-    # Determine query
-    query = "SELECT * FROM users WHERE id = %s"
+    insert_sql = """
+        INSERT INTO users (id)
+        VALUES (%s)
+        ON DUPLICATE KEY UPDATE id = id
+    """
+
+    select_sql = """
+        SELECT
+            id,
+            create_time,
+            last_harvest,
+            coins,
+            reminder,
+            reminder_at,
+            last_harvest_channel
+        FROM users
+        WHERE id = %s
+    """
     if for_update:
-        query += " FOR UPDATE"
+        select_sql += " FOR UPDATE"
 
-    # Execute
     if cur:
-        await cur.execute(query, (user_id,))
+        # Inside an existing transaction
+        await cur.execute(insert_sql, (user_id,))
+        await cur.execute(select_sql, (user_id,))
         row = await cur.fetchone()
     else:
-        row = await db.fetch_one(query, user_id)
-    if row is None:
-        if cur:
-            await cur.execute("INSERT INTO users (id) VALUES (%s)", (user_id,))
-            await cur.execute(query, (user_id,))
-            row = await cur.fetchone()
-        else:
-            await db.execute("INSERT INTO users (id) VALUES (%s)", (user_id,))
-            row = await db.fetch_one(query, user_id)
+        # Autocommit path using your helpers
+        await db.execute(insert_sql, user_id)
+        row = await db.fetch_one(select_sql, user_id)
 
-        if row is None:
-            raise RuntimeError(f"Failed to create user {user_id}.")
+    if row is None:
+        raise RuntimeError(f"Failed to fetch or create user {user_id}")
 
     return {
         "id": row[0],
@@ -71,7 +98,7 @@ async def get_user_info(
         "coins": row[3],
         "reminder": row[4],
         "reminder_at": row[5],
-        "last_harvest_channel": row[6]
+        "last_harvest_channel": row[6],
     }
 
 async def sanitize_quantity(ctx, quantity : int|None|str):
@@ -172,6 +199,7 @@ async def open_pack_and_build_message(
     user,
     pack_id: int,
     amount: int = 1,
+    cur : Cursor|None = None,
     harvest_messages: list[str]|None = None,
 ) -> str:
     if harvest_messages is None:
@@ -181,14 +209,14 @@ async def open_pack_and_build_message(
     harvest_message = random.choice(harvest_messages)
     prefix = l.text("harvest", "prefix", mention=user.mention)
     is_new = False
-    for mfw in mfws:
-        result = await db.execute(
-            """
+    query = """
             INSERT INTO inventory (user_id, mfw_id)
             VALUES (%s, %s)
             ON DUPLICATE KEY UPDATE quantity = quantity + 1
-            """,
-            (user.id, mfw["id"])
+            """
+    for mfw in mfws:
+        if cur: result = cur.execute(query, (user.id, mfw["id"]))
+        else: result = await db.execute(query, (user.id, mfw["id"])
         )
         is_new = result == 1
         guild = bot.get_guild(mfw["guild"])

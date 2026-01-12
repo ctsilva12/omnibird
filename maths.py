@@ -13,7 +13,6 @@ import json
 from languages import l
 import time
 
-users_in_math_problems : list[int] = []
 
 def generate_problem():
     problem_type = random.randint(1, 4)
@@ -33,6 +32,10 @@ def generate_problem():
 class Math(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.users_in_math_problems : list[int] = []
+
+    async def cog_unload(self):
+        self.users_in_math_problems.clear()
     
     @commands.command(name='math', description=l.text("math", "description"))
     async def get_math_problem(self, ctx, other_user: discord.Member|None = None):
@@ -41,7 +44,7 @@ class Math(commands.Cog):
             await ctx.send(l.text("math", "challenging_bot"))
             return
         
-        if ctx.author.id in users_in_math_problems:
+        if ctx.author.id in self.users_in_math_problems:
             return
         
         target = other_user or ctx.author
@@ -51,7 +54,7 @@ class Math(commands.Cog):
             "answer": answer
         }
         await ctx.send(l.text("math", "challenge", mention=target.mention, question=question))
-        users_in_math_problems.append(ctx.author.id)
+        self.users_in_math_problems.append(ctx.author.id)
 
         def is_answer_correct(attempt, answer):
             if isinstance(answer, str):
@@ -69,9 +72,17 @@ class Math(commands.Cog):
         result = "loss"
         message = None
         while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                await ctx.send(l.text("math", "timeout", mention=target.mention))
+                details["user_answer"] = None
+                details["reason"] = "Timeout"
+                result = "loss"
+                break
             try:
-                message = await self.bot.wait_for('message', check=check, timeout=deadline-time.monotonic())
+                message = await self.bot.wait_for('message', check=check, timeout=remaining)
             except asyncio.TimeoutError:
+                # should never happen, but good to be safe
                 await ctx.send(l.text("math", "timeout", mention=target.mention))
                 if target == ctx.author:
                     details["user_answer"] = None
@@ -84,8 +95,8 @@ class Math(commands.Cog):
             if message is not None:
                 if message.author == target:
                     correct = is_answer_correct(message.content, answer);
-                    if correct is None: pass
-                    elif correct == False:
+                    if correct is None: continue
+                    if not correct:
                         lose_message = l.text("math", "wrong_value", mention=target.mention, answer=answer)
                         if tip is not None: lose_message = f"{lose_message} {tip}"
                         await ctx.send(lose_message)
@@ -97,29 +108,35 @@ class Math(commands.Cog):
                         result = "win"
                         break
                 else:
-                    if message.author.id not in users_in_math_problems:
-                        correct = None
-                        for substring in message.content.split(" "):
-                            correct = is_answer_correct(substring, answer)
-                            if correct: break
-                        if correct:
-                            await ctx.send(l.text("math", "not_target_answering", mention=message.author.mention))
+                    if message.author.id in self.users_in_math_problems:
+                        continue
+                    found = False
+                    for substring in message.content.split(" "):
+                        found = is_answer_correct(substring, answer)
+                        if found: break
+                    if found:
+                        result = "interrupter"
+                        await ctx.send(l.text("math", "not_target_answering", mention=message.author.mention))
                         details["user_answer"] = message.content.strip(),
                         details["reason"] = "Not being challenged",
                         await db.execute("INSERT INTO game_results(game_id, player1_id, winner_player_id, player1_score, details)" \
                         "VALUES (%s, %s, %s, %s, %s)", 
                         (1, message.author.id, None, 0, json.dumps(details)))
-                        return
+                        self.users_in_math_problems.remove(ctx.author.id)  
+                        break
+                    else: continue
+                
 
                 
 
-            
-        winner_player_id = None if result == "loss" else ctx.author.id
-        details["user_answer"] = message.content.strip() if message != None else None
-        await db.execute("INSERT INTO game_results(game_id, player1_id, winner_player_id, player1_score, details)" \
-        "VALUES (%s, %s, %s, %s, %s)", 
-        (1, ctx.author.id, winner_player_id, 1 if winner_player_id else 0, json.dumps(details)))        
-        users_in_math_problems.remove(ctx.author.id)       
+        try: self.users_in_math_problems.remove(ctx.author.id)
+        except ValueError: pass
+        if result != "interrupter":
+            winner_player_id = None if result == "loss" else ctx.author.id
+            details["user_answer"] = message.content.strip() if message != None else None
+            await db.execute("INSERT INTO game_results(game_id, player1_id, winner_player_id, player1_score, details)" \
+            "VALUES (%s, %s, %s, %s, %s)", 
+            (1, ctx.author.id, winner_player_id, 1 if winner_player_id else 0, json.dumps(details)))            
 
         if message: print(f"The answer given was: {message.content}\nThe correct answer is: {answer}")
 

@@ -13,9 +13,10 @@ class Economy(commands.Cog):
     @commands.command(name='balance', description=l.text("balance", "description"))
     async def show_balance(self, ctx, user: discord.Member|None = None):
         target = user or ctx.author
-        info = await helpers.get_user_info(target.id)
-        coins = info["coins"]
-        await ctx.send(l.text("balance", "message", mention=target.mention, coins=coins), allowed_mentions=discord.AllowedMentions.none())
+        async with db.transaction() as cur:
+            info = await helpers.get_user_info(target.id, cur=cur)
+            coins = info["coins"]
+            await ctx.send(l.text("balance", "message", mention=target.mention, coins=coins))
 
     @commands.command(name='give', description=l.text("give", "description"))
     async def give_cash(self, ctx, user: discord.Member|None = None, amount: int|None = None):

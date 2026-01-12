@@ -83,17 +83,15 @@ class Shop(commands.Cog):
         if (item is None): 
             await ctx.send(l.text("shop", "buy", "invalid_item"))
             return
-        
-        coins_to_pay : int = item.price * amount
-        info = await helpers.get_user_info(ctx.author.id)
-        if (info["coins"] < coins_to_pay):
-            await ctx.send(l.text("shop", "buy", "insufficient_coins"))
-            return
-
-        message = []
+        async with db.transaction() as cur:
+            coins_to_pay : int = item.price * amount
+            message = []
+            await cur.execute("UPDATE users SET coins = coins - %s WHERE id = %s AND coins >= %s", (coins_to_pay, ctx.author.id, coins_to_pay))
+            if cur.rowcount == 0:
+                await ctx.send(l.text("shop", "buy", "insufficient_coins"))
+                return
         match item.type:
             case "pack":
-                await db.execute("UPDATE users SET coins = coins - %s WHERE id = %s", (coins_to_pay, ctx.author.id))
                 message = await helpers.open_pack_and_build_message(
                     bot=self.bot, user=ctx.author, pack_id=item.payload["pack_id"], amount=amount)
                 chunks = helpers.chunk_string_by_length(message, max_len=2000, sep=" ")

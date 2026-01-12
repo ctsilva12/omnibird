@@ -11,11 +11,11 @@ import responses
 import db
 from languages import l, locale_reloader
 import random
-from helpers import get_admins
+from helpers import get_admins, sync_emojis
 
 load_dotenv()
 COGS = ["mfw", "economy", "gambling", "admin", "shop", "maths"]
-GUILDS_FOR_EMOJIS : list[int] = [1457482751723700444]
+GUILDS_FOR_EMOJIS : list[int] = [1459703612891463792]
 BOT_TOKEN = "BOT_TOKEN"
 PROD = os.getenv("PROD", "0").lower() in ("1", "true", "yes")
 
@@ -52,14 +52,11 @@ class HotReloader:
                     mtime = None
                 prev = self._mtimes.get(ext)
                 if prev is None and mtime is not None:
-                    # now exists -> treat as change (load if not loaded)
                     await self._reload_extension_safe(ext)
                     self._mtimes[ext] = mtime
                 elif prev is not None and mtime is not None and mtime > prev:
                     await self._reload_extension_safe(ext)
                     self._mtimes[ext] = mtime
-                # if file deleted (mtime is None) we ignore
-        # loop ends
 
     async def _reload_extension_safe(self, ext: str):
         try:
@@ -111,19 +108,7 @@ class Omnibird(commands.Bot):
         if not self._ready_once:
             self._ready_once = True
             print(f"{self.user} is now online! (on_ready)")
-            for guild_id in GUILDS_FOR_EMOJIS:
-                guild = self.get_guild(guild_id)
-                if guild:
-                    try:
-                        for emoji in guild.emojis:
-                            await db.execute(
-                                "INSERT INTO mfws (id, name, rarity_id, guild_id, is_animated) "
-                                "VALUES (%s, %s, %s, %s, %s) AS new ON DUPLICATE KEY UPDATE name = new.name",
-                                (emoji.id, emoji.name, 0, guild_id, getattr(emoji, "animated", False))
-                            )
-                    except Exception:
-                        print("Failed to sync emojis")
-                        traceback.print_exc()
+            await sync_emojis(bot, GUILDS_FOR_EMOJIS)
 
     async def send_message(self, message, user_message, is_private=False):
         try:
@@ -177,10 +162,13 @@ async def cmd_reload(ctx, *, extension: str|None = None):
     targets = COGS if extension is None else [extension]
     reloaded = []
     failed = []
-    reload_locale = True if extension is None else False
+    reload_locale = reload_emojis = True if extension is None else False 
     for ext in targets:
         if ext == "locale":
             reload_locale = True
+            continue
+        elif ext == "emojis":
+            reload_emojis = True
             continue
         try:
             if ext in bot.extensions:
@@ -199,7 +187,14 @@ async def cmd_reload(ctx, *, extension: str|None = None):
         except Exception:
             failed.append("locale")
             traceback.print_exc()
-    await ctx.author.send(f"reloaded: {reloaded}, failed: {failed}")
+    if reload_emojis:
+        try:
+            await sync_emojis(bot, GUILDS_FOR_EMOJIS)
+            reloaded.append("emojis")
+        except:
+            failed.append("emojis")
+            traceback.print_exc()
+    await ctx.send(f"reloaded: {reloaded}\nfailed: {failed}")
 
 
 def run_discord_bot():

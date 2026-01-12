@@ -10,10 +10,10 @@ from utils.symbols import COIN_ICON, MFWS
 def mysql_round(x):
     return int(Decimal(str(x)).quantize(0, rounding=ROUND_HALF_UP))
 
-def render_roulette_players(players):
+def render_roulette_players(players, gun="gun"):
     hex_text = f"""\n
     {players[0]["mfw"]} {players[1]["mfw"]}
-{players[5]["mfw"]}  {MFWS["gun"]}  {players[2]["mfw"]}
+{players[5]["mfw"]}  {MFWS[gun]}  {players[2]["mfw"]}
     {players[4]["mfw"]} {players[3]["mfw"]}\n
 """
     return f"\n{hex_text}\n"
@@ -72,7 +72,7 @@ class Gambling(commands.Cog):
                 mention=ctx.author.mention, new_balance=new_balance, coin_icon=COIN_ICON)}"
             else: message = f"{message} {l.text("coinflip", "bet_0")}"
 
-            await ctx.send(message, allowed_mentions=discord.AllowedMentions.none())
+            await ctx.send(message)
             return
     
     
@@ -102,7 +102,6 @@ class Gambling(commands.Cog):
         players.append({"id": ctx.author.id, 
         "mfw": helpers.mfw_emoji(author_mfw_data["id"], author_mfw_data["name"], author_mfw_data["is_animated"])})
 
-        # If multiplayer, invite mentioned valid users to pick mfw or decline
         if not singleplayer:
             mention_string = ", ".join(user.mention for user in valid_users)
             await ctx.send(
@@ -151,8 +150,16 @@ class Gambling(commands.Cog):
                 await msg.edit(content=render_roulette_players(players))
                 await asyncio.sleep(0.3 + delay) 
             
+            gun = "gun"
+            turn_around = random.randint(1, 100)
+            if turn_around == 1 and (players[LOSER_INDEX]["id"] is not None or players[5]["id"] is not None):
+                LOSER_INDEX = 5
+                gun = "nou"
+                await msg.edit(content=render_roulette_players(players, gun=gun))
+                await asyncio.sleep(0.5)
+                
             players[LOSER_INDEX]["mfw"] = MFWS["ded"]
-            await msg.edit(content=render_roulette_players(players))
+            await msg.edit(content=render_roulette_players(players, gun=gun))
             await asyncio.sleep(0.5)
             results = []
             blood_money = 0

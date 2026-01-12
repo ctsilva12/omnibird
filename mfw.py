@@ -10,75 +10,90 @@ from utils.harvest_messages import HARVEST_MESSAGES
 from utils.Pagination import Pagination
 from utils.symbols import COIN_ICON
 from languages import l
+from functools import partial
 
 class MfwCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        bot.loop.create_task(self.load_pending_reminders())
+        self.pending_reminders: dict[int, asyncio.Task] = {}
+        self.loader_task = self.bot.loop.create_task(self.load_pending_reminders())
         self.MAX_MFWS_PER_PAGE = 150
 
     async def load_pending_reminders(self):
         await self.bot.wait_until_ready()
-        now = datetime.now()
-        rows = await db.fetch_all("SELECT id, reminder_at, last_harvest_channel FROM users WHERE reminder = TRUE")
+        rows = await db.fetch_all("SELECT id, reminder_at, last_harvest_channel FROM users WHERE reminder = TRUE AND reminder_at IS NOT NULL")
         for user_id, reminder_at, last_harvest_channel in rows:
-            if (reminder_at is not None):
-                print(f"Setting reminder for {await helpers.get_username(self.bot, user_id)} at {reminder_at}")
-                asyncio.create_task(self.schedule_harvest_reminder(user_id, reminder_at, last_harvest_channel))
+            print(f"Setting reminder for {await helpers.get_username(self.bot, user_id)} at {reminder_at}")
+            task = asyncio.create_task(self.schedule_harvest_reminder(user_id, reminder_at, last_harvest_channel))
+            task.add_done_callback(partial(lambda uid, t: self.pending_reminders.pop(uid, None), user_id))
+            self.pending_reminders[user_id] = task
+
+    async def cog_unload(self):
+        if self.loader_task and not self.loader_task.done():
+            self.loader_task.cancel()
+        for task in list(self.pending_reminders.values()):
+            if not task.done():
+                task.cancel()
+        self.pending_reminders.clear()
 
     @commands.command(name='harvest', description=l.text("harvest", "description"))
     async def get_mfw(self, ctx):
         COOLDOWN_IN_SECONDS = 600
         now = datetime.now()
-        info = await helpers.get_user_info(ctx.author.id)
-        if (info["last_harvest"] is None):
-            free = True
-            secs_since = 0
-        else:
-            delta = now - info["last_harvest"]
-            secs_since = delta.total_seconds()
-            print(secs_since)
-            free = secs_since >= COOLDOWN_IN_SECONDS
-        if (not free):
-            time = helpers.format_duration(COOLDOWN_IN_SECONDS-secs_since)
-            await ctx.send(l.text("harvest", "next_free_harvest", time=time, coins=50, yes=l.text("yes"), no=l.text("no")))
-            
-            def check(m):
-                return m.author == ctx.author and m.channel == ctx.channel
+        reminder_at = now + timedelta(seconds=COOLDOWN_IN_SECONDS)
+        async with db.transaction() as cur:
+            info = await helpers.get_user_info(ctx.author.id, cur=cur, for_update=True)
+            # 1 = row found
+            await cur.execute("""UPDATE users
+            SET last_harvest = %s, reminder_at = %s
+            WHERE id = %s
+            AND (
+                last_harvest IS NULL OR
+                TIMESTAMPDIFF(SECOND, last_harvest, %s) >= %s)
+            """, (now, reminder_at, ctx.author.id, now, COOLDOWN_IN_SECONDS))
+            free = cur.rowcount == 1
 
-            try:
-                msg = await self.bot.wait_for("message", check=check, timeout=30) 
-            except asyncio.TimeoutError:
-                await ctx.send(l.text("harvest", "timeout"))
-                return
+            if (free):
+                if (info["reminder"]):
+                    task = asyncio.create_task(self.schedule_harvest_reminder(ctx.author.id, reminder_at, ctx.channel.id))
+                    self.pending_reminders[ctx.author.id] = task
+                    task.add_done_callback(partial(lambda uid, t: self.pending_reminders.pop(uid, None), ctx.author.id))
+            else:
+                secs_since = (now - info["last_harvest"]).total_seconds()
+                remaining = max(0, COOLDOWN_IN_SECONDS - int(secs_since))
+                time = helpers.format_duration(remaining)
+                await ctx.send(l.text("harvest", "next_free_harvest", time=time, coins=50, yes=l.text("yes"), no=l.text("no")))
+                
+                def check(m):
+                    return m.author == ctx.author and m.channel == ctx.channel
 
-            if msg.content.lower() != l.text("yes")[0]:
-                return
-            
-            if (info["coins"] < 50):
-                await ctx.send(l.text("harvest", "insufficient_coins", coins=50))
-                return
+                try:
+                    msg = await self.bot.wait_for("message", check=check, timeout=30) 
+                except asyncio.TimeoutError:
+                    await ctx.send(l.text("harvest", "timeout"))
+                    return
+
+                if msg.content.lower() not in (l.text("yes")[0], l.text("yes")):
+                    return
+                
+                if (info["coins"] < 50):
+                    await ctx.send(l.text("harvest", "insufficient_coins", coins=50))
+                    return
+                
+                await cur.execute("UPDATE users SET coins = coins - 50 WHERE id = %s", (ctx.author.id,), cur=cur)
+                
         # 1 = Normal Harvest
         message = await helpers.open_pack_and_build_message(
             bot=self.bot, user=ctx.author, pack_id=1, amount=1
         )
-        if (free): 
-            reminder_at = now + timedelta(seconds=COOLDOWN_IN_SECONDS)
-            await db.execute("UPDATE users SET last_harvest = %s, reminder_at = %s, last_harvest_channel = %s WHERE id = %s", (now, reminder_at, ctx.channel.id, ctx.author.id))
-            if (info["reminder"]): asyncio.create_task(self.schedule_harvest_reminder(ctx.author.id, reminder_at, ctx.channel.id))
-        else: await db.execute("UPDATE users SET coins = coins - 50 WHERE id = %s", (ctx.author.id,))
-
         await ctx.send(message)
        
     
     async def schedule_harvest_reminder(self, user_id, reminder_at, last_harvest_channel):
         delay = (reminder_at - datetime.now()).total_seconds()
         if (delay > 0): await asyncio.sleep(delay)
-        reminder = await db.fetch_one("SELECT reminder FROM users WHERE id = %s", (user_id))
-        if (reminder is None or reminder[0] == False):
-            return
-        channel = self.bot.get_channel(last_harvest_channel)
         await db.execute("UPDATE users SET reminder_at = NULL WHERE id = %s", (user_id,))
+        channel = self.bot.get_channel(last_harvest_channel)
         if channel:
             await channel.send(l.text("reminder", "ready", mention=f"<@{user_id}>"))
 
@@ -100,7 +115,11 @@ class MfwCommands(commands.Cog):
         if toggle == True:
             now = datetime.now()
             if (info["reminder_at"] is not None and info["reminder_at"] > now): 
-                asyncio.create_task(self.schedule_harvest_reminder(ctx.author.id, info["reminder_at"], info["last_harvest_channel"]))
+                task = asyncio.create_task(self.schedule_harvest_reminder(ctx.author.id, info["reminder_at"], info["last_harvest_channel"]))
+                task.add_done_callback(partial(lambda uid, t: self.pending_reminders.pop(uid, None), ctx.author.id))
+                self.pending_reminders[ctx.author.id] = task
+        else:
+            self.pending_reminders.pop(ctx.author.id, None)
 
         option = l.text("enabled") if toggle == True else l.text("disabled")
         await ctx.send(l.text("reminder", "changed", option=option))
