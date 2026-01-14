@@ -11,6 +11,7 @@ from utils.Pagination import Pagination
 from utils.symbols import COIN_ICON
 from languages import l
 from functools import partial
+from collections import defaultdict, OrderedDict
 
 class MfwCommands(commands.Cog):
     def __init__(self, bot):
@@ -82,7 +83,7 @@ class MfwCommands(commands.Cog):
                 
                 await cur.execute("UPDATE users SET coins = coins - 50 WHERE id = %s", (ctx.author.id,), cur=cur)
                 
-        # 1 = Normal Harvest
+            # 1 = Normal Harvest
         message = await helpers.open_pack_and_build_message(
             bot=self.bot, user=ctx.author, pack_id=1, amount=1
         )
@@ -125,8 +126,14 @@ class MfwCommands(commands.Cog):
         await ctx.send(l.text("reminder", "changed", option=option))
 
     @commands.command(name='inventory', description=l.text("inventory", "description")) 
-    async def inventory(self, ctx, user: discord.Member | None = None):
+    async def inventory(self, ctx, user: discord.Member | None = None, requested_page : int|None = None):
         target = user or ctx.author
+        if requested_page is not None:
+                try:
+                    initial_page = int(requested_page)
+                except ValueError:
+                    initial_page = 1
+        else: requested_page = 1
 
         owned_mfws = await db.fetch_all("""
             SELECT i.mfw_id, i.quantity, m.guild_id, m.name, m.rarity_id
@@ -170,8 +177,11 @@ class MfwCommands(commands.Cog):
             entries.append({"rarity_id": rarity_id, "text": display})
             total_user += 1
 
+
         async def get_inventory_page(page : int):
             total_pages = Pagination.compute_total_pages(len(entries), self.MAX_MFWS_PER_PAGE)
+            page = max(1, min(page, total_pages))
+
             if total_pages <= 0:
                 e = discord.Embed(
                     title=l.text("inventory", "title", name=target.display_name),
@@ -181,7 +191,6 @@ class MfwCommands(commands.Cog):
                 e.set_footer(text=f"0/{total_global} • {l.text("page", page=0, total_pages=0)}", icon_url="https://cdn.discordapp.com/emojis/1425964337377443840.webp")
                 return e, 0
             
-            page = max(1, min(page, total_pages))
             start = (page - 1) * self.MAX_MFWS_PER_PAGE
             end = start + self.MAX_MFWS_PER_PAGE
             page_slice = entries[start:end]
@@ -208,6 +217,129 @@ class MfwCommands(commands.Cog):
             return embed, total_pages
 
         paginator = Pagination(ctx, get_inventory_page)
+        paginator.index = max(
+            1,
+            min(
+                requested_page,
+                Pagination.compute_total_pages(len(entries), self.MAX_MFWS_PER_PAGE)
+            )
+        )
+        await paginator.navigate()
+
+    @commands.command(name='almanac', description=l.text("almanac", "description")) 
+    async def almanac(self, ctx, user: discord.Member | None = None, requested_page : int|str|None = None):
+        target = user or ctx.author
+
+        owned_mfws = await db.fetch_all("""
+            SELECT m.id, COALESCE(i.quantity, 0), m.guild_id, m.name, m.rarity_id
+            FROM mfws m
+            LEFT JOIN inventory i ON i.mfw_id = m.id AND i.user_id = %s
+            INNER JOIN rarities r on m.rarity_id = r.id
+            ORDER BY m.guild_id ASC, m.rarity_id DESC, m.name ASC
+        """, (target.id,))
+        
+        guilds = await db.fetch_all("SELECT id, name from guilds", cache=True)
+        rarities = await db.fetch_all("SELECT * FROM rarities", cache=True, ttl=9999)
+        rarity_map = {r[0]: r[1] for r in rarities}
+        rarity_id_map = {r[1]: r[0] for r in rarities} # for sorting in pagination later
+        guild_map = {g[0]: g[1] for g in guilds}
+        rarity_map[0] = l.text("unknown").capitalize()
+        
+        totals: OrderedDict[str, defaultdict[str, int]] = OrderedDict()
+        user_totals: OrderedDict[str, defaultdict[str, int]] = OrderedDict()
+        almanac_list: OrderedDict[str, defaultdict[str, list[dict]]] = OrderedDict()
+
+        for g_id, g_name in guild_map.items():
+            totals[g_name] = defaultdict(int)
+            user_totals[g_name] = defaultdict(int)
+            almanac_list[g_name] = defaultdict(list)
+
+        for mfw_id, quantity, guild_id, name, rarity_id in owned_mfws:
+            guild_name = guild_map[guild_id]
+            rarity_name = rarity_map[rarity_id]
+
+            emoji = None
+            guild_obj = self.bot.get_guild(guild_id) if guild_id else None
+            if guild_obj:
+                emoji = discord.utils.get(guild_obj.emojis, name=name) or name
+            else:
+                emoji = name
+
+            almanac_list[guild_name][rarity_name].append({
+                "id": mfw_id,
+                "name": name,
+                "quantity": quantity,
+                "owned": True if quantity > 0 else False,
+                "text": f"{emoji} {f"(x{quantity})" if quantity > 0 else ""}"
+            })
+
+            totals[guild_name][rarity_name] += 1
+            if quantity > 0:
+                user_totals[guild_name][rarity_name] += 1
+        
+
+        async def get_almanac_page(page : int):
+            total_pages = len(totals)
+            if requested_page is None: page = max(1, min(page, total_pages))
+            else: 
+                try:
+                    page = int(requested_page)
+                    if page < 1 or page > total_pages:
+                        page = 1
+                except ValueError:
+                        try:
+                            page = list(guild_map.values()).index(requested_page) + 1
+                        except ValueError:
+                            page = 1
+            if total_pages <= 0:
+                e = discord.Embed(
+                    description=l.text("almanac", "no_mfws"),
+                    color=discord.Color.gold()
+                )
+                e.set_footer(text=f"0/0 • {l.text("page", page=0, total_pages=0)}", icon_url="https://cdn.discordapp.com/emojis/1425964337377443840.webp")
+                return e, 0
+            
+            guild_name = list(totals.keys())[page-1]
+            page = max(1, min(page, total_pages))
+            page_slice = almanac_list[guild_name]
+
+            embed = discord.Embed(
+                colour=discord.Color.gold()
+            )
+
+            for rarity_name in sorted(page_slice.keys(), key=lambda n: rarity_id_map.get(n, 0), reverse=True):
+                items = page_slice[rarity_name]
+
+                # split into plain text lines (no icon added yet)
+                not_owned_lines = [it["text"] for it in items if not it.get("owned")]
+                owned_lines = [it["text"] for it in items if it.get("owned")]
+
+                # get chunks (helpers.chunk_by_length should return list[str] joined with newlines)
+                not_chunks = helpers.chunk_by_length(not_owned_lines) if not_owned_lines else []
+                owned_chunks = helpers.chunk_by_length(owned_lines) if owned_lines else []
+
+                first_field_for_this_rarity = True
+                for group_chunks, icon in ((owned_chunks, ":white_check_mark:"), (not_chunks, ":x:")):
+                    if not group_chunks:
+                        continue
+                    for i, chunk in enumerate(group_chunks):
+                        value = f"{icon} {chunk}" if i == 0 else chunk
+
+                        if first_field_for_this_rarity:
+                            name = f"{rarity_name} ({user_totals[guild_name].get(rarity_name, 0)}/{totals[guild_name].get(rarity_name, 0)})"
+                            first_field_for_this_rarity = False
+                        else:
+                            name = ""
+
+                        embed.add_field(name=name, value=value, inline=False)
+
+            user_count = sum(user_totals.get(guild_name, {}).values())
+            total_count = sum(totals.get(guild_name, {}).values())
+            embed.title = l.text("almanac", "title", name=target.display_name, guild=guild_name, percentage=round(user_count/total_count*100, 1))
+            embed.set_footer(text=f"{user_count}/{total_count} • {l.text("page", page=page, total_pages=total_pages)}", icon_url="https://cdn.discordapp.com/emojis/1425964337377443840.webp")
+            return embed, total_pages
+
+        paginator = Pagination(ctx, get_almanac_page)
         await paginator.navigate()
     @commands.command(name='transfer', description=l.text("transfer", "description"))
     async def transfer_mfw(self, ctx, user: discord.Member | None = None, *values: str):

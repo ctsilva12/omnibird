@@ -19,6 +19,7 @@
   "minutes": "minutes",
   "second": "second",
   "seconds": "seconds",
+  "only_author_can_interact_with_pagination": "Only the author of the command's message can interact with this pagination.",
   "math": {
     "command": "math",
     "description": "Basic math operations and challenges",

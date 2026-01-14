@@ -45,15 +45,16 @@ def mfw_emoji(id : int, name : str, is_animated=False) -> str:
         return f"<a:{name}:{id}>"
     else: return f"<:{name}:{id}>"
 
+
 async def get_user_info(
     user_id: int,
     cur: Cursor | None = None,
     for_update: bool = False
 ) -> dict:
     """
-    Fetch user info, creating the user if it does not exist.
-    MySQL + aiomysql safe.
-    """
+    returns id, create_time, last_harvest, coins, reminder, reminder_at, last_harvest_channel.
+    creates user if it doesnt exist
+"""
     if for_update and cur is None:
         raise ValueError("for_update=True requires a transaction cursor")
 
@@ -78,18 +79,19 @@ async def get_user_info(
     if for_update:
         select_sql += " FOR UPDATE"
 
-    if cur:
-        # Inside an existing transaction
-        await cur.execute(insert_sql, (user_id,))
-        await cur.execute(select_sql, (user_id,))
-        row = await cur.fetchone()
-    else:
-        # Autocommit path using your helpers
-        await db.execute(insert_sql, user_id)
-        row = await db.fetch_one(select_sql, user_id)
+    try:
+        if cur is not None:
+            await cur.execute(insert_sql, (user_id,))
+            await cur.execute(select_sql, (user_id,))
+            row = await cur.fetchone()
+        else:
+            async with db.transaction() as tx_cur:
+                await tx_cur.execute(insert_sql, (user_id,))
+                await tx_cur.execute(select_sql, (user_id,))
+                row = await tx_cur.fetchone()
 
-    if row is None:
-        raise RuntimeError(f"Failed to fetch or create user {user_id}")
+    except Exception as exc:
+        raise RuntimeError(f"DB error while fetching/creating user {user_id}: {exc}") from exc
 
     return {
         "id": row[0],

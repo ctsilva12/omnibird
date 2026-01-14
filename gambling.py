@@ -246,10 +246,5 @@ async def invite_user(user, ctx, taken_mfws, players, lock):
         await ctx.send(l.text("russianroulette", "successful_join", mention=user.mention), allowed_mentions=discord.AllowedMentions.none())
         joined = True
             
-
-        
-            
-        
-
 async def setup(bot):
     await bot.add_cog(Gambling(bot))
