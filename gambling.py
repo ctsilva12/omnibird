@@ -6,14 +6,13 @@ import helpers
 import asyncio
 from decimal import Decimal, ROUND_HALF_UP
 from languages import l
-from utils.symbols import COIN_ICON, MFWS
 def mysql_round(x):
     return int(Decimal(str(x)).quantize(0, rounding=ROUND_HALF_UP))
 
 def render_roulette_players(players, gun="gun"):
     hex_text = f"""\n
     {players[0]["mfw"]} {players[1]["mfw"]}
-{players[5]["mfw"]}  {MFWS[gun]}  {players[2]["mfw"]}
+{players[5]["mfw"]}  {l.text("_symbols", "gun")} {players[2]["mfw"]}
     {players[4]["mfw"]} {players[3]["mfw"]}\n
 """
     return f"\n{hex_text}\n"
@@ -69,14 +68,14 @@ class Gambling(commands.Cog):
                 if (quantity > 0): await cur.execute("UPDATE users SET coins = %s WHERE id = %s;", (new_balance, ctx.author.id)) 
             if (quantity > 0): 
                 message = f"{message} {l.text("coinflip", "new_balance", 
-                mention=ctx.author.mention, new_balance=new_balance, coin_icon=COIN_ICON)}"
+                mention=ctx.author.mention, new_balance=new_balance)}"
             else: message = f"{message} {l.text("coinflip", "bet_0")}"
 
             await ctx.send(message)
             return
     
     
-    @commands.command(name='russianroulette', description='1/6 chance to lose all your money')
+    @commands.command(name='russianroulette', description=l.text("russianroulette", "description"))
     async def russianroulette(self, ctx, confirmation: str | None, mfw: str = '777'):
         MULTIPLIER = 1.25
 
@@ -92,7 +91,7 @@ class Gambling(commands.Cog):
 
         author_mfw_data = await helpers.check_if_mfw_exists(mfw)
         if author_mfw_data is None:
-            await ctx.send("You need to pick a valid avatar for yourself dumbass")
+            await ctx.send(l.text("russianroulette", "no_avatar"))
             return
 
         players = []
@@ -131,7 +130,7 @@ class Gambling(commands.Cog):
             user_balances = {row[0]: row[1] for row in await cur.fetchall()}
     
             while len(players) < 6:
-                players.append({"mfw": MFWS["mfw"], "id": None})
+                players.append({"mfw": l.text("_symbols", "mfw"), "id": None})
             
             random.shuffle(players)
             rolls = random.randint(8, 13)
@@ -158,7 +157,7 @@ class Gambling(commands.Cog):
                 await msg.edit(content=render_roulette_players(players, gun=gun))
                 await asyncio.sleep(0.5)
                 
-            players[LOSER_INDEX]["mfw"] = MFWS["ded"]
+            players[LOSER_INDEX]["mfw"] = l.text("_symbols", "ded")
             await msg.edit(content=render_roulette_players(players, gun=gun))
             await asyncio.sleep(0.5)
             results = []

@@ -3,7 +3,6 @@ from discord.ext import commands
 import random
 import db
 import helpers
-from utils.symbols import COIN_ICON
 from languages import l
 
 class Economy(commands.Cog):
@@ -55,7 +54,7 @@ class Economy(commands.Cog):
         for index, row in enumerate(leaderboard, start=1):
             user_id = row[0]
             coins = row[1]
-            description += f"**{index}.** <@{user_id}> - {coins} {COIN_ICON}\n"
+            description += l.text("leaderboard", "line", index=index, user_id=user_id, coins=coins)
 
         embed = discord.Embed(
             title=l.text("leaderboard", "title"),

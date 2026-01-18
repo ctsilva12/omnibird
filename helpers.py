@@ -6,7 +6,6 @@ from discord.ext import commands
 from datetime import datetime
 import random
 from typing import List, Dict, Any, Tuple
-from utils.harvest_messages import HARVEST_MESSAGES
 from languages import l
 import traceback
 
@@ -205,7 +204,7 @@ async def open_pack_and_build_message(
     harvest_messages: list[str]|None = None,
 ) -> str:
     if harvest_messages is None:
-        harvest_messages = HARVEST_MESSAGES
+        harvest_messages = l.text_all("harvest_messages")
     mfws = await open_pack(pack_id, amount)
     parts = []
     harvest_message = random.choice(harvest_messages)
@@ -242,12 +241,12 @@ async def open_pack_and_build_message(
     return message
 
 def canonical(name: str) -> str:
-    return name.strip().replace(":", "")
+    m = re.search(r"<:([^:]+):\d+>", name)
+    return m.group(1) if m else name.strip()
 
 async def parse_mfw_values(input_str: str):
     items = []
 
-    input_str = input_str.replace(":", "")
     for part in input_str.split(","):
         tokens = part.strip().split()
         if not tokens:
@@ -256,7 +255,7 @@ async def parse_mfw_values(input_str: str):
         quantity = 1
         if len(tokens) == 1:
             name = tokens[0]
-            items.append((name, quantity))
+            items.append((canonical(name), quantity))
             continue
         elif len(tokens) > 2:
             raise ValueError
@@ -272,7 +271,7 @@ async def parse_mfw_values(input_str: str):
 
         if (name is None):
             raise ValueError
-        items.append((name, quantity))
+        items.append((canonical(name), quantity))
     return items
 
 async def parse_and_validate_mfws(bot, user, *values: str):
@@ -374,31 +373,22 @@ def chunk_by_length(items, max_len=1024, sep=", "):
 
     return chunks
 
-def chunk_string_by_length(string: str, max_len=3000, sep="\n") -> list[str]:
-    chunks = []
-    line = []
-    total_length = 0
+def chunk_string(s, limit=1990, sep=","):
+    start = 0
+    while start < len(s):
+        if len(s) - start <= limit:
+            yield s[start:]
+            break
 
-    for substring in string.split(sep):
-        while substring:
-            space_left = max_len - total_length
-            piece = substring[:space_left]
-            line.append(piece)
-            total_length += len(piece)
-            substring = substring[space_left:]
-            if total_length >= max_len:
-                chunks.append(sep.join(line))
-                line.clear()
-                total_length = 0
+        idx = s.rfind(sep, start, start + limit)
+        if idx == -1:
+            idx = start + limit
 
-    if line:
-        chunks.append(sep.join(line))
-
-    return chunks
-
+        yield s[start:idx + 1] if s[idx] == sep else s[start:idx]
+        start = idx + 1 if s[idx] == sep else idx
 
 async def check_if_mfw_exists(mfw_name : str) -> Dict[str, Any] | None:
-    result = await db.fetch_one("SELECT id, guild_id, rarity_id, name, is_animated FROM mfws WHERE name = %s", (mfw_name,))
+    result = await db.fetch_one("SELECT id, guild_id, rarity_id, name, is_animated FROM mfws WHERE name = %s", (canonical(mfw_name),))
     if (result is None): return None
     return {
         "id": result[0],

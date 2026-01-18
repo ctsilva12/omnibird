@@ -6,9 +6,7 @@ import db
 import helpers
 from datetime import datetime, timedelta
 import asyncio
-from utils.harvest_messages import HARVEST_MESSAGES
 from utils.Pagination import Pagination
-from utils.symbols import COIN_ICON
 from languages import l
 from functools import partial
 from collections import defaultdict, OrderedDict
@@ -81,7 +79,7 @@ class MfwCommands(commands.Cog):
                     await ctx.send(l.text("harvest", "insufficient_coins", coins=50))
                     return
                 
-                await cur.execute("UPDATE users SET coins = coins - 50 WHERE id = %s", (ctx.author.id,), cur=cur)
+                await cur.execute("UPDATE users SET coins = coins - 50 WHERE id = %s", (ctx.author.id,))
                 
             # 1 = Normal Harvest
         message = await helpers.open_pack_and_build_message(
@@ -184,7 +182,7 @@ class MfwCommands(commands.Cog):
 
             if total_pages <= 0:
                 e = discord.Embed(
-                    title=l.text("inventory", "title", name=target.display_name),
+                    title=l.text("inventory", "title", name=target.display_name, percentage=0.00),
                     description=l.text("inventory", "no_mfws", name=target.display_name),
                     color=discord.Color.gold()
                 )
@@ -196,7 +194,7 @@ class MfwCommands(commands.Cog):
             page_slice = entries[start:end]
 
             embed = discord.Embed(
-                title=l.text("inventory", "title", name=target.display_name),
+                title=l.text("inventory", "title", name=target.display_name, percentage=round(total_user/total_global*100, 2)),
                 colour=discord.Color.gold()
             )
 
@@ -412,7 +410,7 @@ class MfwCommands(commands.Cog):
             message_array = [""]
             for info in rarity_map.values():
                 if info["price"]:
-                    message_array.append(f"{info['rarity']}: {info['price']} {COIN_ICON}")
+                    message_array.append(f"{info['rarity']}: {info['price']} {l.text("_symbols", "coin_icon")}")
             await ctx.send(
                 f"{l.text("sell", "info")}\n"
                 + "\n".join(message_array)

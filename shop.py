@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 import json
 from typing import Dict, Tuple
 from utils.Pagination import Pagination
-from utils.symbols import COIN_ICON
 from languages import l
 
 @dataclass
@@ -37,7 +36,7 @@ class Shop(commands.Cog):
         embed = discord.Embed(title=l.text("shop", "title"), color=0x00ff00)
         for item in items_page:
             embed.add_field(
-                name=f"{item.name} - {item.price} {COIN_ICON}",
+                name=l.text("shop", "item_format", item=item),
                 value=item.description,
                 inline=False
             )
@@ -94,7 +93,7 @@ class Shop(commands.Cog):
             case "pack":
                 message = await helpers.open_pack_and_build_message(
                     bot=self.bot, user=ctx.author, pack_id=item.payload["pack_id"], amount=amount)
-                chunks = helpers.chunk_string_by_length(message, max_len=2000, sep=" ")
+                chunks = helpers.chunk_string(message)
                 for chunk in chunks:
                     await ctx.send(chunk)
             case "upgrade":

@@ -1,4 +1,13 @@
 {
+  "_symbols": {
+    "coin_icon": "<:coin:1454548640604491836>",
+    "mfw": "<:mfw:1425964337377443840>",
+    "777": "<:mfw:1450040676585836627>",
+    "gun": "<:gun:1456277999874871429>",
+    "ded": "<:ded:1455650053048893672>",
+    "van": "<:van:1455674496005701778>",
+    "nou": "<:nou:1456720425047294024>"
+  },
   "yes": "yes",
   "no": "no",
   "the": "the",
@@ -68,12 +77,14 @@
   "leaderboard": {
     "command": "leaderboard",
     "description": "Displays the top 10 users by coin balance",
-    "title": "Top 10 users by coin balance"
+    "title": "Top 10 users by coin balance",
+    "line": "**{index}.** <@{user_id}> - {coins} {coin_icon}\n"
   },
   "shop": {
     "command": "shop",
     "description": "Interact with the shop",
     "title": "Shop — use o!shop buy <item> [amount] to purchase items",
+    "item_format": "{item.name} - {item.price} {coin_icon}",
     "items": {
 
     },
@@ -145,7 +156,7 @@
     "command": "inventory",
     "description": "View your or another user's items",
     "no_mfws": "{name} has no items.",
-    "title": "{name}'s items"
+    "title": "{name}'s items ({percentage}%)"
   },
   "transfer": {
     "command": "transfer",

@@ -1,7 +1,7 @@
 import os
 import json
-from utils.symbols import COIN_ICON, MFWS
 import asyncio
+
 
 class LocaleManager:
     def __init__(self, path="locale", default_lang="en"):
@@ -22,7 +22,10 @@ class LocaleManager:
         self.LANG = "dev" if "dev" in self.TEXT else self.LANG
 
     def resolve_auto(self, fmt: dict[str, str]) -> dict[str, str]:
-        return {**MFWS, **fmt}
+        symbols = self.TEXT[self.LANG].get("_symbols", {})
+        if not isinstance(symbols, dict):
+            raise TypeError("_symbols must be a dict")
+        return {**symbols, **fmt}
 
     def text(self, *path, **fmt):
         cur = self.TEXT[self.LANG]
