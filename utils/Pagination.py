@@ -15,6 +15,7 @@ class Pagination(discord.ui.View):
         *,
         only_author_can_interact: bool = True,
         timeout: float = 100,
+        start_index = 1
     ):
         super().__init__(timeout=timeout)
 
@@ -22,7 +23,7 @@ class Pagination(discord.ui.View):
         self.get_page = get_page
         self.only_author_can_interact = only_author_can_interact
 
-        self.index: int = 1
+        self.index: int = max(1, start_index)
         self.total_pages: int = 1
         self.message: Optional[discord.Message] = None
 
@@ -111,6 +112,17 @@ class Pagination(discord.ui.View):
     def compute_total_pages(total_results: int, results_per_page: int) -> int:
         return math.ceil(total_results / results_per_page)
     
-    async def navigate(self):
+    async def navigate(self, index: int = 1):
+        self.index = max(1, index)
+
+        if self.total_pages and self.index > self.total_pages:
+            self.index = self.total_pages
         if self.message is None:
             await self.send()
+        else:
+            embed, self.total_pages = await self.get_page(self.index)
+            if self.index > self.total_pages:
+                self.index = self.total_pages
+                embed, _ = await self.get_page(self.index)
+            self._update_buttons()
+            await self.message.edit(embed=embed, view=self)

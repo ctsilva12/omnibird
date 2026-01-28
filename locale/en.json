@@ -28,6 +28,8 @@
   "minutes": "minutes",
   "second": "second",
   "seconds": "seconds",
+  "loading": "Loading...",
+  "bot_not_allowed": "Please choose a non-bot user",
   "only_author_can_interact_with_pagination": "Only the author of the command's message can interact with this pagination.",
   "math": {
     "command": "math",
@@ -57,6 +59,45 @@
       "tip": "Remember the {preprocessed_triple} (multiplied by x{multiply})."
     }
   },
+  "cards": {
+        "suits": {
+            "hearts": "♥️",
+            "spades": "♠️",
+            "clubs": "♣️",
+            "diamonds": "♦️"
+        },
+        "ranks": {
+            "one": "1️⃣",
+            "two": "2️⃣",
+            "three": "3️⃣",
+            "four": "4️⃣",
+            "five": "5️⃣",
+            "six": "6️⃣",
+            "seven": "7️⃣",
+            "eight": "8️⃣",
+            "nine": "9️⃣",
+            "ten": "🔟",
+            "jack": "🃏",
+            "queen": "👸",
+            "king": "🤴",
+            "ace": "🅰️"
+        }
+    },
+  "blackjack": {
+      "command": "blackjack",
+      "description": "Play blackjack",
+      "dealer": "Dealer",
+      "hit": "Hit",
+      "stand": "Stand",
+      "double_down": "Double Down",
+      "mystery_card": "??",
+      "soft": "Soft",
+      "value": "Value",
+      "bet": "Bet",
+      "blackjack": "Blackjack",
+      "busted": "(busted)",
+      "insufficient_funds": "Insufficient funds to double down."
+    },
   "quantity": {
     "none": "Please provide an amount.",
     "invalid": "Please provide a valid quantity."
