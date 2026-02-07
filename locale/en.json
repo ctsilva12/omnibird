@@ -1,4 +1,5 @@
 {
+  "rarities": {},
   "_symbols": {
     "coin_icon": "<:coin:1454548640604491836>",
     "mfw": "<:mfw:1425964337377443840>",
@@ -8,10 +9,39 @@
     "van": "<:van:1455674496005701778>",
     "nou": "<:nou:1456720425047294024>"
   },
+  "commands": {
+        "blackjack": "blackjack",
+        "math": "math",
+        "balance": "balance",
+        "give": "give",
+        "leaderboard": "leaderboard",
+        "shop": "shop",
+        "shop_buy": "buy",
+        "coinflip": "coinflip",
+        "russianroulette": "russianroulette",
+        "harvest": "harvest",
+        "reminder": "reminder",
+        "inventory": "inventory",
+        "almanac": "almanac",
+        "transfer": "transfer",
+        "trade": "trade",
+        "sell": "sell",
+        "selldupes": "selldupes",
+        "check": "check",
+        "quote": "quote",
+        "grant": "grant",
+        "setrarity": "setrarity",
+        "clearcache": "clearcache",
+        "restart": "restart",
+        "addguild": "addguild"
+  },
+  "command_doesnt_exist": "This command doesn't exist.",
   "yes": "yes",
   "no": "no",
   "the": "the",
   "of": "of",
+  "none": "None",
+  "restarting": "Restarting...",
   "undefined": "undefined",
   "enable": "enable",
   "disable": "disable",
@@ -28,7 +58,10 @@
   "minutes": "minutes",
   "second": "second",
   "seconds": "seconds",
-  "only_author_can_interact_with_pagination": "Only the author of the command's message can interact with this pagination.",
+  "loading": "Loading...",
+  "bot_not_allowed": "Please choose a non-bot user",
+  "too_much_gambling": "You can only bet a max of {coins} {coin_icon} in this game.",
+  "only_author_can_interact_with_PageSwitcher": "Only the author of the command's message can interact with this.",
   "math": {
     "command": "math",
     "description": "Basic math operations and challenges",
@@ -57,6 +90,74 @@
       "tip": "Remember the {preprocessed_triple} (multiplied by x{multiply})."
     }
   },
+  "cards": {
+        "suits": {
+            "hearts": "♥️",
+            "spades": "♠️",
+            "clubs": "♣️",
+            "diamonds": "♦️"
+        },
+        "ranks": {
+            "one": "1️⃣",
+            "two": "2️⃣",
+            "three": "3️⃣",
+            "four": "4️⃣",
+            "five": "5️⃣",
+            "six": "6️⃣",
+            "seven": "7️⃣",
+            "eight": "8️⃣",
+            "nine": "9️⃣",
+            "ten": "🔟",
+            "jack": "🃏",
+            "queen": "👸",
+            "king": "🤴",
+            "ace": "🅰️"
+        }
+    },
+  "trade": {
+    "description": "Trade with another user",
+    "trading_with_self": "You can't trade with yourself.",
+    "embed_title": "{mention1} and {mention2}'s trade",
+    "embed_description": "Submit your offers.",
+    "offer": "Offer",
+    "accept": "Accept",
+    "edit_offer": "Edit Offer",
+    "cancel": "Cancel",
+    "cant_accept_twice": "You've already accepted. To cancel, click \"Cancel\".",
+    "coins": "Coins: {coins} {coin_icon}",
+    "mfws": "Mfws: {mfws}",
+    "coins_input": "Coins",
+    "mfws_input": "Mfws (e.g., 2 mfw1, 7 mfw2, mfw3)",
+    "not_participating": "You are not a participant in this trade.",
+    "coins_must_be_number": "Coins must be a valid number.",
+    "coins_changed_since_modal": "{mention} attempted to complete the trade, but their coin balance has changed since then. Current balance: {coins} {coin_icon}.",
+    "insufficient_balance": "You do not have enough coins. Current balance: {coins} {coin_icon}.",
+    "abort_trade": "{mention} has decided to cancel the trade.",
+    "timeout": "{mention1} and {mention2}'s trade timed out."
+  },
+  "blackjack": {
+      "command": "blackjack",
+      "description": "Play blackjack",
+      "no_bet": "You must provide an amount to bet.",
+      "dealer": "Dealer",
+      "hit": "Hit",
+      "stand": "Stand",
+      "double_down": "Double Down",
+      "mystery_card": "??",
+      "soft": "Soft",
+      "value": "Value",
+      "bet": "Bet",
+      "blackjack": "Blackjack",
+      "busted": "(busted)",
+      "insufficient_funds": "Insufficient funds.",
+      "x_has_busted": "{name} has busted!",
+      "win": "Their new balance is {new_coins} {coin_icon} (up from {old_coins} {coin_icon}).",
+      "lost": "Their new balance is {new_coins} {coin_icon} (down from {old_coins} {coin_icon}).",
+      "tie": "Their balance is the exact same.",
+      "x_has_pushed": "{name} has pushed!",
+      "x_has_won": "{name} has won!",
+      "x_has_lost": "{name} has lost!"
+    },
   "quantity": {
     "none": "Please provide an amount.",
     "invalid": "Please provide a valid quantity."
@@ -75,13 +176,16 @@
     "success": "{mention} now has {coins} {coin_icon}."
   },
   "leaderboard": {
-    "command": "leaderboard",
-    "description": "Displays the top 10 users by coin balance",
-    "title": "Top 10 users by coin balance",
-    "line": "**{index}.** <@{user_id}> - {coins} {coin_icon}\n"
-  },
+        "command": "leaderboard",
+        "description": "Displays the top 10 of specific stats",
+        "money_title": "Top 10 richest",
+        "money_line": "**{index}.** <@{user_id}> - {coins} {coin_icon}\n",
+        "mfw_title": "Top 10 completionists ({total_mfws} {mfw})",
+        "mfw_line": "**{index}.** <@{user_id}> - **{percentage}%** ({mfws_owned})\n"
+    },
   "shop": {
     "command": "shop",
+    "harvest_message": "from Omnibird's Shop!",
     "description": "Interact with the shop",
     "title": "Shop — use o!shop buy <item> [amount] to purchase items",
     "item_format": "{item.name} - {item.price} {coin_icon}",
@@ -191,9 +295,14 @@
   },
   "parse": {
     "no_mfw": "You do not own {mfw_name}.",
+    "mfw_doesnt_exist": "{mfw_name} doesn't exist.",
     "invalid_quantity": "Please provide a valid amount.",
     "more_than_they_have": "You only have {owned_quantity} {emoji}."
   },
+  "check": {
+        "description": "Check if an user owns a specific item or not.",
+        "user_has": "{mention} has: "
+    },
   "harvest_messages": {
     "message_1": " from storage.",
     "message_2": " from your garden.",

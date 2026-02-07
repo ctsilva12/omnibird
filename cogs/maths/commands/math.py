@@ -1,45 +1,13 @@
 import discord
-from discord.ext import commands
-import random
-import db
-import helpers
-import asyncio
-from utils.mathproblems.arithmetic import generate_arithmetic_problem
-from utils.mathproblems.triangle import generate_triangle_problem
-from utils.mathproblems.trigonometry import generate_trigonometry_problem
-from utils.mathproblems.geometry import generate_geometry_problem
-import random
-import json
 from languages import l
+from ..mathproblems import generate_problem
 import time
+import asyncio
+import db
+import json
 
-
-def generate_problem():
-    problem_type = random.randint(1, 4)
-    timeout = 20
-    tip = None
-    if problem_type == 1:
-        question, answer = generate_arithmetic_problem()
-    elif problem_type == 2:
-        question, answer, timeout = generate_geometry_problem()
-    elif problem_type == 3:
-        question, answer, tip, timeout = generate_triangle_problem()
-    else: 
-        question, answer = generate_trigonometry_problem()
-
-    return question, answer, tip, timeout
-
-class Math(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.users_in_math_problems : list[int] = []
-
-    async def cog_unload(self):
-        self.users_in_math_problems.clear()
-    
-    @commands.command(name='math', description=l.text("math", "description"))
-    async def get_math_problem(self, ctx, other_user: discord.Member|None = None):
-        MATH_COINS = 10
+async def math(self, ctx, other_user: discord.Member|None = None):
+        MATH_COINS = 20
         if other_user and other_user.bot:
             await ctx.send(l.text("math", "challenging_bot"))
             return
@@ -127,8 +95,6 @@ class Math(commands.Cog):
                     else: continue
                 
 
-                
-
         try: self.users_in_math_problems.remove(ctx.author.id)
         except ValueError: pass
         if result != "interrupter":
@@ -139,6 +105,3 @@ class Math(commands.Cog):
             (1, ctx.author.id, winner_player_id, 1 if winner_player_id else 0, json.dumps(details)))            
 
         if message: print(f"The answer given was: {message.content}\nThe correct answer is: {answer}")
-
-async def setup(bot):
-    await bot.add_cog(Math(bot))

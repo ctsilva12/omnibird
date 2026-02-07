@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "name": "Normal Harvest",
+    "description": "test"
+  },
+  "slots": [
+    {
+      "name": "main_slot",
+      "rolls": 1,
+      "selection": {
+        "mode": "weighted",
+        "distinct_within_slot": false
+      },
+       "rarity_weights": {
+          "1": 0.5699,
+          "2": 0.25,
+          "3": 0.12,
+          "4": 0.05,
+          "5": 0.01,
+          "6": 0.0001
+        },
+      "item_weights": []
+    }
+  ],
+  "duplication": {
+    "duplicate_policy": "keep",
+    "allow_duplicates_per_user": true,
+    "allow_duplicates_across_slots": true
+  },
+  "global_filters": [],
+  "post_processing": {
+    "on_empty": "raise_error"
+  },
+  "version": 1
+}

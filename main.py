@@ -11,30 +11,30 @@ import responses
 import db
 from languages import l, locale_reloader
 import random
-from helpers import get_admins, sync_emojis
+from utils.services.discordutils import sync_emojis
+from utils.services.dbutils import get_admins
+from utils.decorators import is_admin
+from pathlib import Path
+from utils.misc import discover_cogs
 
 load_dotenv()
-COGS = ["mfw", "economy", "gambling", "admin", "shop", "maths"]
-GUILDS_FOR_EMOJIS : list[int] = [1459703612891463792]
 BOT_TOKEN = "BOT_TOKEN"
 PROD = os.getenv("PROD", "0").lower() in ("1", "true", "yes")
 
 
 class HotReloader:
-    """
-    Lightweight file-watcher that polls modification times and reloads changed extensions.
-    Works without external deps (no watchdog). Reasonable for development.
-    """
     def __init__(self, bot: commands.Bot, extensions: list[str], poll_interval: float = 2.0):
         self.bot = bot
         self.extensions = extensions
         self.poll_interval = poll_interval
+        self.cog_index = discover_cogs()
         self._mtimes: Dict[str, Optional[float]] = {}
-        for ext in extensions:
-            spec = importlib.util.find_spec(ext)
-            path = spec.origin if spec and spec.origin else (ext.replace(".", os.sep) + ".py")
+        for ext in self.cog_index.values():
+            module_path = Path(ext.replace(".", os.sep) + ".py")
+            path = module_path if module_path.exists() else None
             try:
-                self._mtimes[ext] = os.path.getmtime(path)
+                if path is not None: self._mtimes[ext] = os.path.getmtime(path)
+                else: continue
             except OSError:
                 self._mtimes[ext] = None
         self._task: Optional[asyncio.Task] = None
@@ -61,10 +61,10 @@ class HotReloader:
     async def _reload_extension_safe(self, ext: str):
         try:
             if ext in self.bot.extensions:
-                await self.bot.reload_extension(ext)
+                await self.bot.reload_extension(f"cogs.{ext}")
                 print(f"[hot-reload] reloaded extension: {ext}")
             else:
-                await self.bot.load_extension(ext)
+                await self.bot.load_extension(f"cogs.{ext}")
                 print(f"[hot-reload] loaded new extension: {ext}")
         except Exception:
             print(f"[hot-reload] failed to reload {ext}")
@@ -89,17 +89,18 @@ class Omnibird(commands.Bot):
         super().__init__(command_prefix="o!", intents=intents)
         self.hot_reloader: Optional[HotReloader] = None
         self._ready_once = False
+        self.cog_index: dict[str, str] = discover_cogs()
 
     async def setup_hook(self):
-        for cog in COGS:
+        for ext in self.cog_index.values():
             try:
-                await self.load_extension(cog)
+                await self.load_extension(ext)
             except Exception:
-                print(f"Failed loading {cog}")
+                print(f"Failed loading {ext}")
                 traceback.print_exc()
 
         if not PROD:
-            self.hot_reloader = HotReloader(self, COGS)
+            self.hot_reloader = HotReloader(self, list(self.cog_index.values()))
             self.hot_reloader.start()
             locale_reloader.start()
             print("PROD=false, hotreloader enabled")
@@ -108,7 +109,7 @@ class Omnibird(commands.Bot):
         if not self._ready_once:
             self._ready_once = True
             print(f"{self.user} is now online! (on_ready)")
-            await sync_emojis(bot, GUILDS_FOR_EMOJIS)
+            await sync_emojis(bot)
 
     async def send_message(self, message, user_message, is_private=False):
         try:
@@ -145,6 +146,10 @@ async def on_message(message):
     await bot.process_commands(message)
     await bot.send_message(message, user_message, False)
 
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.reply(l.text("command_doesnt_exist"))
 
 @bot.command(name="quote", description=l.text("quote", "description"))
 async def get_random_quote(ctx):
@@ -152,48 +157,62 @@ async def get_random_quote(ctx):
     await ctx.send(quote)
     print(f"The following message was successfully sent: {quote}")
 
-
-# ADMIN ONLY
 @bot.command(name="reload", hidden=True)
-async def cmd_reload(ctx, *, extension: str|None = None):
-    ADMINS = await get_admins()
-    if ctx.author.id not in ADMINS:
+@is_admin()
+async def cmd_reload(ctx, *, extension: str | None = None):
+    reload_map = {}
+    cog_index = getattr(bot, "cog_index", None)
+    if cog_index is None:
         return
-    targets = COGS if extension is None else [extension]
+    for folder, ext_path in cog_index.items():
+        reload_map[folder] = ext_path
+
+    reload_map["locale"] = lambda: l.load_all()
+    reload_map["emojis"] = lambda: sync_emojis(bot)
+
+    if extension is None:
+        targets = list(reload_map.keys())
+    else:
+        name = extension.strip()
+        if name in reload_map:
+            targets = [name]
+        elif name.startswith("cogs.") or name.endswith(".cog"):
+            matched_key = next((k for k, v in reload_map.items() if v == name), None)
+            targets = [matched_key or name]
+        else:
+            targets = [name]
+
     reloaded = []
     failed = []
-    reload_locale = reload_emojis = True if extension is None else False 
-    for ext in targets:
-        if ext == "locale":
-            reload_locale = True
+
+    for key in targets:
+        if key in reload_map:
+            item = reload_map[key]
+            display = key
+        elif isinstance(key, str) and (key.startswith("cogs.") or key.endswith(".cog")):
+            item = key
+            display = key
+        else:
+            failed.append(key)
             continue
-        elif ext == "emojis":
-            reload_emojis = True
-            continue
+
         try:
-            if ext in bot.extensions:
-                await bot.reload_extension(ext)
+            if isinstance(item, str):
+                ext_path = item
+                if ext_path in bot.extensions:
+                    await bot.reload_extension(ext_path)
+                else:
+                    await bot.load_extension(ext_path)
+                reloaded.append(display)
             else:
-                await bot.load_extension(ext)
-            reloaded.append(ext)
+                result = item()
+                if asyncio.iscoroutine(result):
+                    await result
+                reloaded.append(display)
         except Exception:
-            failed.append(ext)
+            failed.append(display)
             traceback.print_exc()
-    
-    if reload_locale:
-        try:
-            l.load_all()
-            reloaded.append("locale")
-        except Exception:
-            failed.append("locale")
-            traceback.print_exc()
-    if reload_emojis:
-        try:
-            await sync_emojis(bot, GUILDS_FOR_EMOJIS)
-            reloaded.append("emojis")
-        except:
-            failed.append("emojis")
-            traceback.print_exc()
+
     await ctx.send(f"reloaded: {reloaded}\nfailed: {failed}")
 
 

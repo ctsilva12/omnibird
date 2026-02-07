@@ -2,31 +2,25 @@ import discord
 from discord.ext import commands
 import random
 import db
-import helpers
 from dataclasses import dataclass, field
 import json
-from typing import Dict, Tuple
-from utils.Pagination import Pagination
+from utils.PageSwitcher import PageSwitcher
 from languages import l
+from .misc.ShopItem import ShopItem
+import utils.services.discordutils as discordutils
+import utils.pure.formatting as formatting
+import utils.services.packs as packs
 
-@dataclass
-class ShopItem:
-    id: int
-    name: str
-    description: str
-    price: int
-    type: str
-    payload: Dict = field(default_factory=dict)
-
-
+c = "commands"
+d = "shop"
 class Shop(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.items: list[ShopItem] = []
         self.ITEMS_PER_PAGE : int = 10
 
-    async def get_shop_page(self, page: int) -> Tuple[discord.Embed, int]:
-        total_pages = Pagination.compute_total_pages(len(self.items), self.ITEMS_PER_PAGE)
+    async def get_shop_page(self, page: int) -> tuple[discord.Embed, int]:
+        total_pages = PageSwitcher.compute_total_pages(len(self.items), self.ITEMS_PER_PAGE)
         page = max(1, min(page, total_pages))
 
         start = (page - 1) * self.ITEMS_PER_PAGE
@@ -44,23 +38,21 @@ class Shop(commands.Cog):
         return embed, total_pages
 
     async def load_items(self):
+        self.items.clear()
         items_db = await db.fetch_all("SELECT id, locale_id, price, item_type, payload FROM shop WHERE enabled = 1 ORDER BY item_type ASC, price ASC", cache=True)
         for id, locale_id, price, item_type, payload in items_db:
             self.items.append(ShopItem(id, 
             l.text("shop", "items", locale_id, "name"), l.text("shop", "items", locale_id, "description"),
             price, item_type, json.loads(payload)))
         
-
- 
-    @commands.group(name='shop', description=l.text("shop", "description"), invoke_without_command=True)
+    
+    @commands.group(name=l.text(c, "shop"), description=l.text("shop", "description"), invoke_without_command=True)
     async def shop(self, ctx):
-        if (not self.items):
-            await self.load_items()
-        paginator = Pagination(ctx, self.get_shop_page)
+        await self.load_items()
+        paginator = PageSwitcher(ctx, self.get_shop_page)
         await paginator.navigate()
-        
 
-    @shop.command(name='buy', description=l.text("shop", "buy", "description"))
+    @shop.command(name=l.text(c, "shop_buy"), description=l.text(d, "buy", "description"))
     async def buy(self, ctx, *, args: str):
         item : ShopItem|None = None
         parts = args.rsplit(maxsplit=1)
@@ -70,7 +62,7 @@ class Shop(commands.Cog):
         except ValueError:
             amount = 1
             item_name = args
-        amount = await helpers.sanitize_quantity(ctx, amount)
+        amount = await discordutils.sanitize_quantity(ctx, amount)
         if (amount is None): return
         if (not self.items):
             await self.load_items()
@@ -89,20 +81,15 @@ class Shop(commands.Cog):
             if cur.rowcount == 0:
                 await ctx.send(l.text("shop", "buy", "insufficient_coins"))
                 return
-        match item.type:
-            case "pack":
-                message = await helpers.open_pack_and_build_message(
-                    bot=self.bot, user=ctx.author, pack_id=item.payload["pack_id"], amount=amount)
-                chunks = helpers.chunk_string(message)
-                for chunk in chunks:
-                    await ctx.send(chunk)
-            case "upgrade":
-                pass
+            match item.type:
+                case "pack":
+                    message = await packs.open_pack(
+                        bot=self.bot, user=ctx.author, pack_id=item.payload["pack_id"], amount=amount, cur=cur, harvest_messages=[l.text("shop", "harvest_message")])
+                    chunks = formatting.chunk_string(message)
+                    for chunk in chunks:
+                        await ctx.send(chunk)
+                case "upgrade":
+                    pass
 
-
-
-        
-
-    
 async def setup(bot):
     await bot.add_cog(Shop(bot))

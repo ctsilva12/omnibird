@@ -38,7 +38,7 @@ CREATE TABLE `game_results` (
   KEY `winner_player_id` (`winner_player_id`),
   KEY `fk_games` (`game_id`),
   CONSTRAINT `fk_game_results_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=9095 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15501 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -53,6 +53,21 @@ CREATE TABLE `games` (
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `guilds`
+--
+
+DROP TABLE IF EXISTS `guilds`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `guilds` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) DEFAULT NULL,
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1468945926117789750 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -85,32 +100,17 @@ DROP TABLE IF EXISTS `mfws`;
 CREATE TABLE `mfws` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
-  `name` varchar(12) DEFAULT '',
+  `name` varchar(255) DEFAULT NULL,
   `rarity_id` int NOT NULL,
   `guild_id` bigint NOT NULL COMMENT 'mfw server',
   `is_animated` tinyint(1) DEFAULT '0',
+  `enabled` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id`),
-  KEY `rarity_id` (`rarity_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1459173797575000085 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `pack_rarities`
---
-
-DROP TABLE IF EXISTS `pack_rarities`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `pack_rarities` (
-  `pack_id` int unsigned NOT NULL,
-  `rarity_id` int NOT NULL,
-  `chance` decimal(10,4) DEFAULT '0.0000',
-  PRIMARY KEY (`pack_id`,`rarity_id`),
-  UNIQUE KEY `uq_pack_rarities_pack_rarity` (`pack_id`,`rarity_id`),
-  KEY `fk_pack_rarities_rarity` (`rarity_id`),
-  CONSTRAINT `fk_pack_rarities_pack` FOREIGN KEY (`pack_id`) REFERENCES `packs` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_pack_rarities_rarity` FOREIGN KEY (`rarity_id`) REFERENCES `rarities` (`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `uniq_mfws_name` (`name`),
+  KEY `rarity_id` (`rarity_id`),
+  KEY `idx_mfws_guild_id` (`guild_id`),
+  CONSTRAINT `fk_mfws_guild` FOREIGN KEY (`guild_id`) REFERENCES `guilds` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1468967070791368959 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -124,6 +124,7 @@ CREATE TABLE `packs` (
   `id` int unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
   `mfws` int unsigned DEFAULT '1',
+  `payload` json DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -182,7 +183,7 @@ CREATE TABLE `upgrades_users` (
   PRIMARY KEY (`id`),
   KEY `idx_upgrades_users_user_id` (`user_id`),
   KEY `idx_upgrades_users_shop_id` (`shop_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -197,7 +198,7 @@ CREATE TABLE `users` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
   `last_harvest` timestamp NULL DEFAULT NULL,
   `coins` int DEFAULT '0',
-  `reminder` tinyint(1) DEFAULT '0',
+  `reminder` tinyint(1) DEFAULT '1',
   `reminder_at` timestamp NULL DEFAULT NULL,
   `last_harvest_channel` bigint DEFAULT NULL,
   `is_admin` tinyint(1) DEFAULT '0',
@@ -214,4 +215,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-01-09 20:27:51
+-- Dump completed on 2026-02-05 15:17:45

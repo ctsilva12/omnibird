@@ -102,19 +102,32 @@ async def fetch_one(query: str, *values: Any, cache: bool = False, ttl: int = 30
 async def fetch_all(query: str, *values: Any, cache : bool = False, ttl : int = 300, cur : Cursor | None = None) -> list[tuple]:
     return await _fetch(query, *values, fetch_type="all", cache=cache, ttl=ttl, cur=cur)
 
-async def execute(query: str, *values: Any, cur : Cursor | None = None) -> int:
+async def execute(query: str, *values: Any, cur: Cursor | None = None) -> int:
     flat_values = _flatten_values(values)
+
+    def is_executemany(vals):
+        return (
+            isinstance(vals, (list, tuple)) and
+            vals and
+            all(isinstance(v, (list, tuple)) for v in vals)
+        )
+
     if cur is not None:
         if not flat_values:
             await cur.execute(query)
+        elif is_executemany(values[0]):
+            await cur.executemany(query, values[0])
         else:
             await cur.execute(query, flat_values)
         return cur.rowcount
+
     pool = await init_pool()
     async with pool.acquire() as conn:
         async with conn.cursor() as cursor:
             if not flat_values:
                 await cursor.execute(query)
+            elif is_executemany(values[0]):
+                await cursor.executemany(query, values[0])
             else:
                 await cursor.execute(query, flat_values)
             await conn.commit()

@@ -7,7 +7,7 @@ from languages import l
 GetPage = Callable[[int], Awaitable[tuple[discord.Embed, int]]]
 
 
-class Pagination(discord.ui.View):
+class PageSwitcher(discord.ui.View):
     def __init__(
         self,
         source: discord.Interaction | Context,
@@ -15,6 +15,7 @@ class Pagination(discord.ui.View):
         *,
         only_author_can_interact: bool = True,
         timeout: float = 100,
+        start_index = 1
     ):
         super().__init__(timeout=timeout)
 
@@ -22,8 +23,8 @@ class Pagination(discord.ui.View):
         self.get_page = get_page
         self.only_author_can_interact = only_author_can_interact
 
-        self.index: int = 1
-        self.total_pages: int = 1
+        self.index: int = max(1, start_index)
+        self.total_pages: int = 0
         self.message: Optional[discord.Message] = None
 
         if isinstance(source, discord.Interaction):
@@ -34,13 +35,15 @@ class Pagination(discord.ui.View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if self.only_author_can_interact and interaction.user.id != self.author_id:
             await interaction.response.send_message(
-                l.text("only_author_can_interact_with_pagination"),
+                l.text("only_author_can_interact_with_PageSwitcher"),
                 ephemeral=True,
             )
             return False
         return True
 
     async def send(self):
+        if self.get_page is None: return
+            
         embed, self.total_pages = await self.get_page(self.index)
         self._update_buttons()
 
@@ -48,9 +51,10 @@ class Pagination(discord.ui.View):
             await self.source.response.send_message(embed=embed, view=self)
             self.message = await self.source.original_response()
         else:
-            self.message = await self.source.send(embed=embed, view=self)
+            if self.source: self.message = await self.source.send(embed=embed, view=self)
 
     async def _edit(self, interaction: discord.Interaction):
+        if self.get_page is None: return
         embed, self.total_pages = await self.get_page(self.index)
         self._update_buttons()
         await interaction.response.edit_message(embed=embed, view=self)
@@ -71,6 +75,7 @@ class Pagination(discord.ui.View):
                     child.disabled = self.index >= self.total_pages
                 case "jump":
                     child.disabled = False
+
 
     @discord.ui.button(
         emoji="◀️",
@@ -106,11 +111,26 @@ class Pagination(discord.ui.View):
     async def on_timeout(self):
         if self.message:
             await self.message.edit(view=None)
+        self.source = None
+        self.get_page = None
+        self.message = None
 
     @staticmethod
     def compute_total_pages(total_results: int, results_per_page: int) -> int:
         return math.ceil(total_results / results_per_page)
     
-    async def navigate(self):
+    async def navigate(self, index: int = 1):
+        self.index = max(1, index)
+
         if self.message is None:
             await self.send()
+            return
+        
+        if self.get_page is None: return
+        embed, self.total_pages = await self.get_page(self.index)
+        if self.total_pages:
+            self.index = min(self.index, self.total_pages)
+        else:
+            self.index = 1
+        self._update_buttons()
+        await self.message.edit(embed=embed, view=self)
