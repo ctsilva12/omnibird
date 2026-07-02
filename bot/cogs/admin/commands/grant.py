@@ -4,9 +4,9 @@ import db
 import utils.services.dbutils as dbutils
 import utils.services.discord.discordutils as discordutils
 
-async def grant(self, ctx, target : discord.User|None = None, *values : str):
+async def grant(self, ctx, target : discord.User|discord.Member|None = None, *values : str):
     target = target or ctx.author
-    if not isinstance(target, discord.User):
+    if target is None:
         await ctx.send(l.text("grant", "no_target"))
         return
     if not values:

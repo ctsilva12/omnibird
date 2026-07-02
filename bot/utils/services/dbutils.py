@@ -164,7 +164,7 @@ async def validate_mfws_by_id(
     )
 
     rows = await cur.fetchall()
-    owned = {mfw_id: qty for mfw_id, qty in rows}
+    owned = {mfw_id: qty for mfw_id, qty, *_ in rows}
 
     error_claimed_quantities = []
     error_owned_quantities = []
@@ -177,10 +177,6 @@ async def validate_mfws_by_id(
             error_claimed_quantities.append(f"{qty} {emoji}")
             error_owned_quantities.append(f"{owned.get(mfw_id, 0)} {emoji}")
 
-            raise ValueError(
-                f"<@{user_id}> tried to trade {qty} of mfw {mfw_id} "
-                f"but only owns {owned.get(mfw_id, 0)}!"
-            )
     if error_owned_quantities:
         raise ValueError(l.text("insufficient", "quantity", mention="<@{user_id}>", 
         text1=formatting.join_with_and(error_claimed_quantities), text2=formatting.join_with_and(error_owned_quantities)))

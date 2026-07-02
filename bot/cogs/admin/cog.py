@@ -11,12 +11,12 @@ class Admin(commands.Cog):
 
     @commands.command(name=l.text(c, "setadmin"), hidden=True)
     @commands.is_owner()
-    async def setadmin(self, ctx, target: discord.User|None=None):
+    async def setadmin(self, ctx, target: discord.User|discord.Member|None=None):
         await admin.setadmin(self, ctx, target)
 
     @commands.command(name=l.text(c, "grant"), hidden=True)
     @is_admin()
-    async def grant(self, ctx, target : discord.User|None = None, *values : str):
+    async def grant(self, ctx, target : discord.User|discord.Member|None = None, *values : str):
         await admin.grant(self, ctx, target, *values)
 
     @commands.command(name=l.text(c, "restart"), hidden=True)

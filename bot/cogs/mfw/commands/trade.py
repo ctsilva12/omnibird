@@ -277,10 +277,6 @@ class PromptView(discord.ui.View):
             await self.end_trade(success=False)
         self.stop()
         
-        
-
-    
-
 async def trade(self, ctx, user: discord.User|None):
     if user is None or user.id == ctx.author.id:
         await ctx.send(l.text(c, "trading_with_self"))
